@@ -2,7 +2,7 @@ classdef Parameters
     %PARAMETERS Summary of this class goes here
     %   Detailed explanation goes here
     
-    properties
+    properties (Access = public)
         bounds
         mpcModel
         costs
@@ -11,9 +11,14 @@ classdef Parameters
         normalization
         config
     end
+
+    properties (Access = private)
+        d_config
+    end
     
     methods
-        function obj = Parameters()
+        function obj = Parameters(config)
+            obj.d_config = config;
             %load bounds
             fname = 'bounds.json';
             fid = fopen(fname);
@@ -60,7 +65,29 @@ classdef Parameters
             raw = fread(fid,inf);
             str = char(raw');
             fclose(fid);
-            obj.normalization = jsondecode(str);
+            decoded = jsondecode(str);
+
+            normStateVec = [decoded.x, decoded.y, decoded.yaw, decoded.vx, decoded.vy,...
+                decoded.r, decoded.s, decoded.throttle, decoded.steeringAngle,...
+                decoded.brakes, decoded.vs];
+
+            obj.normalization.tX = diag(normStateVec);
+
+            for i = 1:obj.d_config.NX
+                obj.normalization.tXInv(i,i) = 1/obj.normalization.tX(i,i);
+            end
+
+            normInputVec = [decoded.dThrottle, decoded.dSteeringAngle,...
+                decoded.dBrakes, decoded.dVs];
+
+            obj.normalization.tU = diag(normInputVec);
+
+            for i = 1:obj.d_config.NU
+                obj.normalization.tUInv(i,i) = 1/obj.normalization.tU(i,i);
+            end
+
+            obj.normalization.tS = eye(2);
+            obj.normalization.tSInv = eye(2);
 
             %load config
             fname = 'config.json';
