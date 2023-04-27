@@ -1,8 +1,9 @@
-classdef ArcLengthSpline
+classdef ArcLengthSpline < handle
     %ARC_LENGTH_SPLINE Summary of this class goes here
     %   Detailed explanation goes here
     
     properties (Access = private)
+        d_config
         d_pathData
         d_splineX
         d_splineY
@@ -10,23 +11,24 @@ classdef ArcLengthSpline
     end
     
     methods (Access = public)
-      function obj = ArcLengthSpline(modelParameters)
+        function obj = ArcLengthSpline(config,modelParameters)
+          obj.d_config = config;
           obj.d_pathData = PathData();
           obj.d_splineX = CubicSpline();
           obj.d_splineY = CubicSpline();
           obj.d_parameters = modelParameters;
-      end
+        end
 
-          % X and Y spline used for final spline fit
-      function obj = gen2DSpline(obj,x,y)
+      % X and Y spline used for final spline fit
+      function gen2DSpline(obj,x,y)
           % generate 2-D arc length parametrized spline given X-Y data
           % remove outliers, depending on how iregular the points are this can help
           cleanPath = obj.outlierRemoval(x, y);
           % successively fit spline and re-sample
-          obj = obj.fitSpline(cleanPath.x, cleanPath.y);
+          obj.fitSpline(cleanPath.x, cleanPath.y);
       end
 
-      function sPath = getPostion(obj,s)
+      function sPath = getPosition(obj,s)
           sPath(1) = obj.d_splineX.getPoint(s);
           sPath(2) = obj.d_splineY.getPoint(s);
       end
@@ -49,7 +51,7 @@ classdef ArcLengthSpline
           pos(1) = x.x;
           pos(2) = x.y;
           sGuess = x.s;
-          posPath = obj.getPostion(sGuess);
+          posPath = obj.getPosition(sGuess);
         
           sOpt = sGuess;
           dist = norm(pos - posPath);
@@ -64,7 +66,7 @@ classdef ArcLengthSpline
           end
           sOld = sOpt;
           for i = 1:20
-            posPath = obj.getPostion(sOpt);
+            posPath = obj.getPosition(sOpt);
             dsPath = obj.getDerivative(sOpt);
             ddsPath = obj.getSecondDerivative(sOpt);
             diff = posPath - pos;
@@ -92,7 +94,7 @@ classdef ArcLengthSpline
     end
 
     methods (Access = private)
-        function obj = setData(obj,xIn,yIn)
+        function setData(obj,xIn,yIn)
           % set input data if x and y have same length
           % compute arc length based on an piecewise linear approximation
           if size(xIn,2) == size(yIn,2)
@@ -105,7 +107,7 @@ classdef ArcLengthSpline
           end
         end
 
-        function obj = setRegularData(obj,xIn,yIn,sIn)
+        function setRegularData(obj,xIn,yIn,sIn)
           % set final x-y data if x and y have same length
           % x-y points are space such that they are very close to arc length parametrized
           if size(xIn,2) == size(yIn,2)
@@ -124,13 +126,13 @@ classdef ArcLengthSpline
           nPoints = size(xIn,2);
           % initailize s as zero
      
-          s = zeros(1,nPoints);
+          s = zeros(nPoints);
           %    std::cout << xIn << std::endl;
           for i = 1:(nPoints - 1)
-            dx = xIn(1,i + 1) - xIn(1,i);
-            dy = yIn(1,i + 1) - yIn(1,i);
+            dx = xIn(i + 1) - xIn(i);
+            dy = yIn(i + 1) - yIn(i);
             dist = sqrt(dx * dx + dy * dy);  % dist is straight line distance between points
-            s(1,i + 1) = s(1,i) + dist;               % s is cumulative sum of dist
+            s(i + 1) = s(i) + dist;               % s is cumulative sum of dist
           end
           %    std::cout << sIn << std::endl;
         end
@@ -143,18 +145,18 @@ classdef ArcLengthSpline
             
             % s -> "arc length" where points should be extracted
             % equilly spaced between 0 and current length of path
-            NSpline = 5000;
+            NSpline = obj.d_config.NSpline;
             resampledPath.nPoints = NSpline;
             resampledPath.s = linspace(0, totalArcLength, NSpline);
             
             % initialize new points as zero
-            resampledPath.x = zeros(1,NSpline);
-            resampledPath.y = zeros(1,NSpline);
+            resampledPath.x = zeros(NSpline);
+            resampledPath.y = zeros(NSpline);
             
             % extract X-Y points
             for i = 1:NSpline
-                resampledPath.x(1,i) = initialSplineX.getPoint(resampledPath.s(1,i));
-                resampledPath.y(1,i) = initialSplineY.getPoint(resampledPath.s(1,i));
+                resampledPath.x(i) = initialSplineX.getPoint(resampledPath.s(i));
+                resampledPath.y(i) = initialSplineY.getPoint(resampledPath.s(i));
             end
         end
 
@@ -174,52 +176,52 @@ classdef ArcLengthSpline
               nPoints = size(xOriginal,2);
             
               % initialize with zero
-              resampledPath.x = zeros(1,nPoints);
-              resampledPath.y = zeros(1,nPoints);
+              resampledPath.x = zeros(nPoints);
+              resampledPath.y = zeros(nPoints);
             
               % compute distance between points in X-Y data
-              distVec = zeros(1,nPoints - 1);
+              distVec = zeros(nPoints - 1);
               for i = 1:(nPoints - 1)
-                dx = xOriginal(1,i + 1) - xOriginal(1,i);
-                dy = yOriginal(1,i + 1) - yOriginal(1,i);
-                distVec(1,i) = sqrt(dx * dx + dy * dy);
+                dx = xOriginal(i + 1) - xOriginal(i);
+                dy = yOriginal(i + 1) - yOriginal(i);
+                distVec(i) = sqrt(dx * dx + dy * dy);
               end
               % compute mean distance between points
               meanDist = sum(distVec) / (nPoints - 1);
             
               % compute the new points
               % start point is the original start point
-              resampledPath.x(1,k) = xOriginal(1,k);
-              resampledPath.y(1,k) = yOriginal(1,k);
+              resampledPath.x(k) = xOriginal(k);
+              resampledPath.y(k) = yOriginal(k);
               k = k+1;
               for i = 2:(nPoints - 1)
                 % compute distance between currently checked point and the one last added to the new X-Y path
-                dx = xOriginal(1,i) - xOriginal(1,j);
-                dy = yOriginal(1,i) - yOriginal(1,j);
+                dx = xOriginal(i) - xOriginal(j);
+                dy = yOriginal(i) - yOriginal(j);
                 dist = sqrt(dx * dx + dy * dy);
                 % if this distance is smaller than 0.7 the mean distance add this point to the new X-Y path
                 if dist >= 0.7 * meanDist
-                  resampledPath.x(1,k) = xOriginal(1,i);
-                  resampledPath.y(1,k) = yOriginal(1,i);
+                  resampledPath.x(k) = xOriginal(i);
+                  resampledPath.y(k) = yOriginal(i);
                   k = k+1;
                   j = i;
                 end
               end
               % always add the last point
-              resampledPath.x(1,k) = xOriginal(1,nPoints);
-              resampledPath.y(1,k) = yOriginal(1,nPoints);
+              resampledPath.x(k) = xOriginal(nPoints);
+              resampledPath.y(k) = yOriginal(nPoints);
               k = k+1;
             
               %    std::cout << "not resiszed " << X_new.transpose() << std::endl;
               % set the new X-Y data
               %    setData(X.head(k),Y.head(k));
-              resampledPath.x(:,k:1:end) = [];
-              resampledPath.y(:,k:1:end) = [];
+              resampledPath.x(k:1:end) = [];
+              resampledPath.y(k:1:end) = [];
             
               %    std::cout << "resiszed " << X_new.transpose()  << std::endl;
         end
 
-        function obj = fitSpline(obj,x,y)
+        function fitSpline(obj,x,y)
               % successively fit spline -> re-sample path -> compute arc length
               % temporary spline class only used for fitting
               sApproximation = obj.compArcLength(x, y);
@@ -231,8 +233,8 @@ classdef ArcLengthSpline
               secondSplineX = CubicSpline();
               secondSplineY = CubicSpline();
               % 1. spline fit
-              firstSplineX = firstSplineX.genSpline(sApproximation, x, false);
-              firstSplineY = firstSplineY.genSpline(sApproximation, y, false);
+              firstSplineX.genSpline(sApproximation, x, false);
+              firstSplineY.genSpline(sApproximation, y, false);
               % 1. re-sample
               firstRefinedPath = obj.resamplePath(firstSplineX, firstSplineY, totalArcLength);
               sApproximation = obj.compArcLength(firstRefinedPath.x, firstRefinedPath.y);
@@ -240,16 +242,16 @@ classdef ArcLengthSpline
               totalArcLength = sApproximation(size(sApproximation,2));
               %//////////////////////////////////////////
               % 2. spline fit
-              secondSplineX = secondSplineX.genSpline(sApproximation, firstRefinedPath.x, false);
-              secondSplineY = secondSplineY.genSpline(sApproximation, firstRefinedPath.y, false);
+              secondSplineX.genSpline(sApproximation, firstRefinedPath.x, false);
+              secondSplineY.genSpline(sApproximation, firstRefinedPath.y, false);
               % 2. re-sample
               secondRefinedPath = obj.resamplePath(secondSplineX, secondSplineY, totalArcLength);
               %//////////////////////////////////////////
-              obj = obj.setRegularData(secondRefinedPath.x, secondRefinedPath.y, secondRefinedPath.s);
+              obj.setRegularData(secondRefinedPath.x, secondRefinedPath.y, secondRefinedPath.s);
               %    setData(secondRefinedPath.X,secondRefinedPath.Y);
               % Final spline fit with fixed Delta_s
-              obj.d_splineX = obj.d_splineX.genSpline(obj.d_pathData.s, obj.d_pathData.x, true);
-              obj.d_splineY = obj.d_splineY.genSpline(obj.d_pathData.s, obj.d_pathData.y, true);
+              obj.d_splineX.genSpline(obj.d_pathData.s, obj.d_pathData.x, true);
+              obj.d_splineY.genSpline(obj.d_pathData.s, obj.d_pathData.y, true);
         end
 
         function input = unwrapInput(obj,x)
