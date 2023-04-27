@@ -13,7 +13,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [ X,U,dU,info ] = hpipmInterface(stage,MPC_vars,ModelParams)
+function [returnFlag, optimalSolution] = hpipmInterface(config,stages,x0)
 
 
 % check that env.sh has been run
@@ -27,71 +27,95 @@ if (~strcmp(env_run, 'true'))
 end
 
 
-nx = ModelParams.nx;
-nu = ModelParams.nu;
+nx = config.NX;
+nu = config.NU;
+%ns = config.NS;
+npc = config.NPC;
+
+N = config.N;
+
 qpTotal = tic;
 
 %import hpipm_matlab.*
 
 % dims
-N = MPC_vars.N;
-
 dims = hpipm_ocp_qp_dim(N);
 
-dims.set('nx', (nx+nu), 0, N);
+dims.set('nx', 0, 0);
+dims.set('nx', nx, 1, N);
 dims.set('nu', nu, 0, N-1);
-
-dims.set('nbx', (nx+nu), 0, N);
+dims.set('nu', 0, N);
+dims.set('nbx', 0, 0);
+dims.set('nbx', nx, 1, N-1);
 dims.set('nbu', nu, 0, N-1);
-
+dims.set('nbu', 0, N);
 dims.set('ng', 0, 0);
-dims.set('ng', 1, 1, N);
+dims.set('ng', npc, 1, N-1);
+%dims.set('nsbx', 0, 0, N-1);
+%dims.set('nsbu', 0, 0, N-1)
+%dims.set('nsg', 0, 0);
+%dims.set('nsg', ns, 1, N-1);
 
 %dims.print_C_struct();
 
 
 % qp
 qp = hpipm_ocp_qp(dims);
-%% Equility Constraints
-x0 = blkdiag(MPC_vars.Tx,MPC_vars.Tu)*[stage(1).x0;stage(1).u0];
+%% Dynamics
+%x0 = blkdiag(MPC_vars.Tx,MPC_vars.Tu)*[stage(1).x0;stage(1).u0];
+b0 = stages(1).linModel.a * stateToVector(x0) + stages(1).linModel.g;
 for i = 0:N-1
-   qp.set('A', stage(i+1).Ak, i); 
-   qp.set('B', stage(i+1).Bk, i); 
-   qp.set('b', stage(i+1).gk, i); 
+    if i == 0
+        qp.set('B', stages(i+1).linModel.b, i);
+        qp.set('b', b0, i);
+    else
+        qp.set('A', stages(i+1).linModel.a, i); 
+        qp.set('B', stages(i+1).linModel.b, i); 
+        qp.set('b', stages(i+1).linModel.g, i);
+    end
 end
 
 %% Cost
-for i = 0:N
-    qp.set('Q', stage(i+1).Qk, i);
-    qp.set('q', stage(i+1).fk, i);
-    if i<N
-        qp.set('R', stage(i+1).Rk, i); 
-    end
+for i = 0:N-1
+    qp.set('Q', stages(i+1).costMat.Q, i);
+    qp.set('R', stages(i+1).costMat.R, i);
+    qp.set('S', stages(i+1).costMat.S, i);
+    qp.set('q', stages(i+1).costMat.q, i);
+    qp.set('r', stages(i+1).costMat.r, i);
+    %if stages(i+1).ns ~= 0.0
+    %    qp.set('Zl', stages(i+1).costMat.Z, i);
+    %    qp.set('Zu', stages(i+1).costMat.Z, i);
+    %    qp.set('zl', stages(i+1).costMat.z, i);
+    %    qp.set('zu', stages(i+1).costMat.z, i);
+    %end
 end
-%% Constraints
-for i = 1:N
-    qp.set('C', stage(i+1).Ck, i);
-    qp.set('lg', stage(i+1).lg, i); 
-    qp.set('ug', stage(i+1).ug, i); 
+%% Polytopic Constraints
+for i = 1:N-1
+    qp.set('C', stages(i+1).constrainsMat.c, i);
+    qp.set('D', stages(i+1).constrainsMat.d, i);
+    qp.set('lg', stages(i+1).constrainsMat.dl, i);
+    qp.set('ug', stages(i+1).constrainsMat.du, i);
 end
+
 %% Bounds
-%qp.print_C_struct();
-for i = 0:N
-    qp.set('Jbx', eye(nx+nu), i)
-    if i == 0
-        qp.set('lbx', x0, 0)
-        qp.set('ubx', x0, 0)
-    else
-        qp.set('lbx', stage(i+1).lb(1:nx+nu), i)
-        qp.set('ubx', stage(i+1).ub(1:nx+nu), i)
-    end
-    
-    if i<N
-        qp.set('Jbu', eye(nu), i)
-        qp.set('lbu', stage(i+1).lb(nx+nu+1:nx+nu+nu), i)
-        qp.set('ubu', stage(i+1).ub(nx+nu+1:nx+nu+nu), i)
-    end
+qp.set('Jbu', eye(4), 0, N-1);
+qp.set('Jbx', eye(11), 1, N-1);
+qp.set('lbu', stages(1).lBoundsU, 0);
+qp.set('ubu', stages(1).uBoundsU, 0);
+for i = 1:N-1
+    qp.set('lbx', stages(i+1).lBoundsX,i);
+    qp.set('ubx', stages(i+1).uBoundsX,i);
+    qp.set('lbu', stages(i+1).lBoundsU,i);
+    qp.set('ubu', stages(i+1).uBoundsU,i);
 end
+
+%% Soft Constraints
+%for i = 0:N-1
+%    if stages(i+1).ns ~= 0
+%        
+%    end
+%end
+
     
 %qp.print_C_struct();
 
@@ -108,13 +132,13 @@ mode = 'speed';
 % create and set default arg based on mode
 arg = hpipm_ocp_qp_solver_arg(dims, mode);
 
-arg.set('mu0', 1e0);
-arg.set('iter_max', 200);
-arg.set('tol_stat', 1e-6);
-arg.set('tol_eq', 1e-6);
-arg.set('tol_ineq', 1e-6);
-arg.set('tol_comp', 1e-5);
-arg.set('reg_prim', 1e-12);
+%arg.set('mu0', 1e0);
+arg.set('iter_max', 60);
+%arg.set('tol_stat', 1e-6);
+%arg.set('tol_eq', 1e-6);
+%arg.set('tol_ineq', 1e-6);
+%arg.set('tol_comp', 1e-5);
+%arg.set('reg_prim', 1e-12);
 
 
 % set up solver
@@ -126,58 +150,32 @@ qptime = tic;
 solver.solve(qp, qp_sol);
 tmp_time = toc(qptime);
 
-return_flag = solver.get('status');
+returnFlag = solver.get('status');
 
 fprintf('solve time %e\n', tmp_time);
 
-fprintf('HPIPM returned with flag %d ', return_flag);
+fprintf('HPIPM returned with flag %d ', returnFlag);
 
-if return_flag==0
+if returnFlag==0
     fprintf('-> QP solved\n')
 %     qp_sol.print_C_struct()
 else
     fprintf('-> Solver failed!\n')
 end
 
+optimalSolution(N+1) = OptVariables();
 
-% extract and print sol
-u_opt = zeros(nu,N);
-x_opt = zeros(nx+nu,N);
-for i=0:N-1
-    u_opt(:,i+1) = qp_sol.get('u', i);
-end
-for i=0:N
-	x_opt(:,i+1) = qp_sol.get('x', i);
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-QPtime = toc(qpTotal);
+optimalSolution(1).xk.setZero();
 
-% rescale outputs
-X = MPC_vars.invTx*x_opt(1:nx,:);
-U = MPC_vars.invTu*x_opt(nx+1:end,2:end);
-dU = u_opt;
-
-if return_flag == 0
-    info.exitflag = 0;
-else
-    info.exitflag = 1;
-end
-info.QPtime = tmp_time;
-
-
-
-if is_octave()
-	% directly call destructor for octave 4.2.2 (ubuntu 18.04) + others ???
-	if strcmp(version(), '4.2.2')
-		delete(dims);
-		delete(qp);
-		delete(qp_sol);
-		delete(arg);
-		delete(solver);
-	end
+for i = 1:N
+    optimalSolution(i+1).xk = arrayToState(qp_sol.get('x',i));
 end
 
+for i = 0:N-1
+    optimalSolution(i+1).uk = arrayToInput(qp_sol.get('u',i));
+end
 
+optimalSolution(N+1).uk.setZero();
 
 end
 
