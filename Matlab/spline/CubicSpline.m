@@ -1,4 +1,4 @@
-classdef CubicSpline
+classdef CubicSpline < handle
     %CUBIC_SPLINE Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -14,17 +14,17 @@ classdef CubicSpline
             obj.d_splineData = SplineData();
         end
 
-        function obj = genSpline(obj,xIn,yIn,isRegular)
+        function genSpline(obj,xIn,yIn,isRegular)
         % given x and y data generate spline
         % special case for regular or irregular spaced data points in x
         % if regular the spacing in x is given by deltaX
         
         % store data in data struct
           if isRegular
-            deltaX = xIn(1,2) - xIn(1,1);
-            obj = obj.setRegularData(xIn, yIn, deltaX);
+            deltaX = xIn(2) - xIn(1);
+            obj.setRegularData(xIn, yIn, deltaX);
           else
-            obj = obj.setData(xIn, yIn);
+            obj.setData(xIn, yIn);
           end
           % given data compute spline parameters
         
@@ -32,7 +32,7 @@ classdef CubicSpline
         
           % bool success = compSplineParams();
         
-          obj = obj.compSplineParams();
+          obj.compSplineParams();
         end
         
         function point = getPoint(obj, x)
@@ -42,14 +42,14 @@ classdef CubicSpline
           % compute index
           index = obj.getIndex(x);
           % access previous points
-          xI = obj.d_splineData.xData(1,index);
+          xI = obj.d_splineData.xData(index);
           % compute diff to point and it's powers
           dx = x - xI;
           dx2 = dx * dx;
           dx3 = dx * dx2;
           % return spline value y = a + b dx + c dx^2 + d dx^3
-          point = obj.d_splineParameters.a(1,index) + obj.d_splineParameters.b(1,index) * dx...
-                 + obj.d_splineParameters.c(1,index) * dx2 + obj.d_splineParameters.d(1,index) * dx3;
+          point = obj.d_splineParameters.a(index) + obj.d_splineParameters.b(index) * dx...
+                 + obj.d_splineParameters.c(index) * dx2 + obj.d_splineParameters.d(index) * dx3;
         end
 
         function derivative = getDerivative(obj,x)
@@ -80,7 +80,7 @@ classdef CubicSpline
     end
 
     methods (Access = private)
-        function obj = setRegularData(obj,xIn,yIn,deltaX)
+        function setRegularData(obj,xIn,yIn,deltaX)
             % if x and y have same length, stare given data in spline data struct
               if size(xIn,2) == size(yIn,2)
                 obj.d_splineData.xData = xIn;
@@ -95,7 +95,7 @@ classdef CubicSpline
               end
         end
         
-        function obj = setData(obj, xIn,yIn)
+        function setData(obj,xIn,yIn)
             % if x and y have same length, stare given data in spline data struct
               if size(xIn,2) == size(yIn,2)
                 obj.d_splineData.xData = xIn;
@@ -103,9 +103,12 @@ classdef CubicSpline
                 obj.d_splineData.nPoints = size(xIn,2);
                 obj.d_splineData.isRegular = false;
                 obj.d_splineData.deltaX = 0;
+                xMap = zeros(size(xIn,2),2);
                 for i = 1:size(xIn,2)
-                  obj.d_splineData.xMap(xIn(1,i)) = i;
+                  xMap(i,1:2) = [xIn(i), i];
                 end
+                xMap = sortrows(xMap);
+                obj.d_splineData.xMap = array2table(xMap);
             
                 obj.d_dataSet = true;
               else
@@ -113,21 +116,21 @@ classdef CubicSpline
               end
         end
 
-        function obj = compSplineParams(obj)
+        function compSplineParams(obj)
             % compute spline parameters parameters
             % code is a replica of the wiki code
               % spline parameters from parameter struct initialized to zero
-              obj.d_splineParameters.a = zeros(1,obj.d_splineData.nPoints);
-              obj.d_splineParameters.b = zeros(1,obj.d_splineData.nPoints - 1);
-              obj.d_splineParameters.c = zeros(1,obj.d_splineData.nPoints);
-              obj.d_splineParameters.d = zeros(1,obj.d_splineData.nPoints - 1);
+              obj.d_splineParameters.a = zeros(obj.d_splineData.nPoints);
+              obj.d_splineParameters.b = zeros(obj.d_splineData.nPoints - 1);
+              obj.d_splineParameters.c = zeros(obj.d_splineData.nPoints);
+              obj.d_splineParameters.d = zeros(obj.d_splineData.nPoints - 1);
             
               % additional variables used to compute a,b,c,d
-              mu = zeros(1,obj.d_splineData.nPoints - 1);
-              h = zeros(1,obj.d_splineData.nPoints - 1);
-              alpha = zeros(1,obj.d_splineData.nPoints - 1);
-              l = zeros(1,obj.d_splineData.nPoints);
-              z = zeros(1,obj.d_splineData.nPoints);
+              mu = zeros(obj.d_splineData.nPoints - 1);
+              h = zeros(obj.d_splineData.nPoints - 1);
+              alpha = zeros(obj.d_splineData.nPoints - 1);
+              l = zeros(obj.d_splineData.nPoints);
+              z = zeros(obj.d_splineData.nPoints);
             
               % a is equal to y data
               obj.d_splineParameters.a = obj.d_splineData.yData;
@@ -172,24 +175,23 @@ classdef CubicSpline
               % assumes wrapped data!
             
               % if special case of end points
-              if x == obj.d_splineData.xData(1,obj.d_splineData.nPoints)
+              if x == obj.d_splineData.xData(obj.d_splineData.nPoints)
                 index = obj.d_splineData.nPoints;
                 return;
               end
               % if regular index can be found by rounding
               if obj.d_splineData.isRegular
-                index = cast(floor(x / obj.d_splineData.deltaX), "int64");
+                index = cast(1 + floor(x / obj.d_splineData.deltaX), "int64");
                 return;
               % if irregular index need to be searched
               else
-                keyVec = keys(obj.d_splineData.xMap);
-                arr = cell2mat(keyVec);
-                val = arr(arr > x);
-                if isempty(val)
+                idx = find(obj.d_splineData.xMap.xMap1 > x,1);
+                if isempty(idx)
                   index  = -1;
                   return
                 else
-                  index = obj.d_splineData.xMap(val(1,1)) - 1;
+                  val = obj.d_splineData.xMap.xMap2(idx);
+                  index = val - 1;
                   return;
                 end
              end
