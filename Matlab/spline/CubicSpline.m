@@ -82,10 +82,10 @@ classdef CubicSpline < handle
     methods (Access = private)
         function setRegularData(obj,xIn,yIn,deltaX)
             % if x and y have same length, stare given data in spline data struct
-              if size(xIn,2) == size(yIn,2)
+              if size(xIn,1) == size(yIn,1)
                 obj.d_splineData.xData = xIn;
                 obj.d_splineData.yData = yIn;
-                obj.d_splineData.nPoints = size(xIn,2);
+                obj.d_splineData.nPoints = size(xIn,1);
                 obj.d_splineData.isRegular = true;
                 obj.d_splineData.deltaX = deltaX;
             
@@ -97,14 +97,14 @@ classdef CubicSpline < handle
         
         function setData(obj,xIn,yIn)
             % if x and y have same length, stare given data in spline data struct
-              if size(xIn,2) == size(yIn,2)
+              if size(xIn,1) == size(yIn,1)
                 obj.d_splineData.xData = xIn;
                 obj.d_splineData.yData = yIn;
-                obj.d_splineData.nPoints = size(xIn,2);
+                obj.d_splineData.nPoints = size(xIn,1);
                 obj.d_splineData.isRegular = false;
                 obj.d_splineData.deltaX = 0;
-                xMap = zeros(size(xIn,2),2);
-                for i = 1:size(xIn,2)
+                xMap = zeros(size(xIn,1),2);
+                for i = 1:size(xIn,1)
                   xMap(i,1:2) = [xIn(i), i];
                 end
                 xMap = sortrows(xMap);
@@ -120,17 +120,17 @@ classdef CubicSpline < handle
             % compute spline parameters parameters
             % code is a replica of the wiki code
               % spline parameters from parameter struct initialized to zero
-              obj.d_splineParameters.a = zeros(obj.d_splineData.nPoints);
-              obj.d_splineParameters.b = zeros(obj.d_splineData.nPoints - 1);
-              obj.d_splineParameters.c = zeros(obj.d_splineData.nPoints);
-              obj.d_splineParameters.d = zeros(obj.d_splineData.nPoints - 1);
+              obj.d_splineParameters.a = zeros(obj.d_splineData.nPoints,1);
+              obj.d_splineParameters.b = zeros(obj.d_splineData.nPoints - 1,1);
+              obj.d_splineParameters.c = zeros(obj.d_splineData.nPoints,1);
+              obj.d_splineParameters.d = zeros(obj.d_splineData.nPoints - 1,1);
             
               % additional variables used to compute a,b,c,d
-              mu = zeros(obj.d_splineData.nPoints - 1);
-              h = zeros(obj.d_splineData.nPoints - 1);
-              alpha = zeros(obj.d_splineData.nPoints - 1);
-              l = zeros(obj.d_splineData.nPoints);
-              z = zeros(obj.d_splineData.nPoints);
+              mu = zeros(obj.d_splineData.nPoints - 1,1);
+              h = zeros(obj.d_splineData.nPoints - 1,1);
+              alpha = zeros(obj.d_splineData.nPoints - 1,1);
+              l = zeros(obj.d_splineData.nPoints,1);
+              z = zeros(obj.d_splineData.nPoints,1);
             
               % a is equal to y data
               obj.d_splineParameters.a = obj.d_splineData.yData;
