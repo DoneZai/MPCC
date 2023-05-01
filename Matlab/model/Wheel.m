@@ -41,14 +41,6 @@ classdef Wheel < handle
             end
         end
 
-        function sign = getSign(obj,var)
-            if var >= 0.0
-                sign = 1.0;
-            else
-                sign = -1.0;
-            end
-        end
-
         function frr = getFrr(obj)
             frr = obj.d_tire.QSY1 * obj.d_Fz;
         end

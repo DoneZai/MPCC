@@ -11,18 +11,27 @@ classdef Track  < handle
     end
     
     methods (Access = public)
-        function obj = Track(conesBlue,conesYellow)
-            obj.xOuter = conesBlue(:,1)';
-            obj.yOuter = conesBlue(:,2)';
-            obj.xInner = conesYellow(:,1)';
-            obj.yInner = conesYellow(:,2)';
-            obj.genCenterLine();
+        function obj = Track(conesBlue,conesYellow,centerLine)
+            if nargin > 2
+                obj.xOuter = conesBlue(:,1);
+                obj.yOuter = conesBlue(:,2);
+                obj.xInner = conesYellow(:,1);
+                obj.yInner = conesYellow(:,2);
+                obj.x = centerLine(:,1);
+                obj.y = centerLine(:,2);
+            else
+                obj.xOuter = conesBlue(:,1);
+                obj.yOuter = conesBlue(:,2);
+                obj.xInner = conesYellow(:,1);
+                obj.yInner = conesYellow(:,2);
+                obj.genCenterLine();
+            end
         end
         
         function genCenterLine(obj)
-            bSize = size(obj.xOuter,2);
-            obj.x = zeros(1,bSize);
-            obj.y = zeros(1,bSize);
+            bSize = size(obj.xOuter,1);
+            obj.x = zeros(bSize,1);
+            obj.y = zeros(bSize,1);
             
             for i = 1:bSize
                 coneYellowIndex = obj.getYellowConeIndex(i);
@@ -32,7 +41,7 @@ classdef Track  < handle
         end
 
         function coneYellowIndex = getYellowConeIndex(obj,coneBlueIndex)
-            ySize = size(obj.xInner,2);
+            ySize = size(obj.xInner,1);
             d = inf;
             for i = 1:ySize
                 newD = hypot(obj.xOuter(coneBlueIndex) - obj.xInner(i),obj.yOuter(coneBlueIndex) - obj.yInner(i));

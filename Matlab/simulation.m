@@ -18,7 +18,6 @@ clc
 %% add spline library
 addpath('constraints');
 addpath('cost');
-addpath('interface');
 addpath('model');
 addpath('mpc');
 addpath('parameters');
@@ -29,38 +28,41 @@ addpath('types');
 
 config = config();
 
-trackNameFile = 'FSG.mat'; %track name
-load(trackNameFile);
+% uncomment 33,34,36,37,39,40,42 to use FSG track
 
-track = Track(cones_blue, cones_yellow);
+%trackNameFile = 'FSG.mat'; %track name
+%load(trackNameFile);
+
+%cones_blue(:,1) = cones_blue(:,1) + 30;
+%cones_blue(:,2) = cones_blue(:,2) + 80;
+
+%cones_yellow(:,1) = cones_yellow(:,1) + 30;
+%cones_yellow(:,2) = cones_yellow(:,2) + 80;
+
+%track = Track(cones_blue, cones_yellow);
+
+%uncomment 46,47 to use MPCC track for the fullscale
+
+[cones_blue,cones_yellow,center_line] = generateTestTrack();
+track = Track(cones_blue,cones_yellow,center_line);
 
 parameters = Parameters(config);
 
-% simulator
 simulator = Simulator(parameters.car,parameters.tire);
-%
 
 mpc = Mpcc(config,parameters);
-%profile on;
 mpc.setTrack(track.x,track.y);
-%profile viewer;
 trackCenter = mpc.getTrack().getPath();
-
-figure(1);
-plot(track.xOuter,track.yOuter,'b');
-hold on
-plot(track.xInner,track.yInner,'y');
-plot(track.x,track.y,'r')
-plot(trackCenter.x,trackCenter.y);
+trackLength = mpc.getTrack().getLength();
 
 phi0 = atan2(track.y(2) - track.y(1),track.x(2) - track.x(1));
-%x0 = State(track.x(1),track.y(1),phi0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0);
-x0 = State(0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0);
-log(200) = MPCReturn();
-for i = 1:200
-    mpcSol = mpc.runMPC(x0);
+x0 = State(track.x(1),track.y(1),phi0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0);
+log(parameters.config.nSim) = MPCReturn();
+for i = 1:parameters.config.nSim
+    mpcSol = mpc.runMPC(copy(x0));
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
+    x0.unwrap(trackLength);
     log(i) = mpcSol;
 end
 
-plotRace(log);
+plotRace(log,track,trackCenter,parameters,config);
