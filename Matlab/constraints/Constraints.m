@@ -21,9 +21,9 @@ classdef Constraints
             trackConstraints = obj.getTrackConstraints(track, x);
             alphaConstraintsFront = obj.getAlphaConstraintFront(x);
 
-            cConstrainsMatrix = zeros(2,11);
-            dlConstrainsMatrix = zeros(2,1);
-            duConstrainsMatrix = zeros(2,1);
+            cConstrainsMatrix = zeros(obj.d_config.NPC,obj.d_config.NX);
+            dlConstrainsMatrix = zeros(obj.d_config.NPC,1);
+            duConstrainsMatrix = zeros(obj.d_config.NPC,1);
 
             cConstrainsMatrix(obj.d_config.siIndex.conTrack,:) = trackConstraints.cI;
             dlConstrainsMatrix(obj.d_config.siIndex.conTrack) = trackConstraints.dlI;
@@ -36,7 +36,7 @@ classdef Constraints
             % TODO consider the zero order term directly in the functions constructing the constraints
             dlConstrainsMatrix = dlConstrainsMatrix - cConstrainsMatrix * stateToVector(x);
             duConstrainsMatrix = duConstrainsMatrix - cConstrainsMatrix * stateToVector(x);
-            constraints = ConstraintsMatrix(cConstrainsMatrix, zeros(2,4), dlConstrainsMatrix, duConstrainsMatrix);
+            constraints = ConstraintsMatrix(cConstrainsMatrix, zeros(obj.d_config.NPC,obj.d_config.NU), dlConstrainsMatrix, duConstrainsMatrix);
         end
     end
 

@@ -27,42 +27,34 @@ if (~strcmp(env_run, 'true'))
 end
 
 
-nx = config.NX;
-nu = config.NU;
-%ns = config.NS;
-npc = config.NPC;
+nx = config.NX; % number of state variables
+nu = config.NU; % number of input variables
+%ns = config.NS; % number of soft constraints
+%npc = config.NPC; % number of polytopic constraints
 
-N = config.N;
-
-qpTotal = tic;
+N = config.N; % iters (horizon length)
 
 %import hpipm_matlab.*
 
 % dims
 dims = hpipm_ocp_qp_dim(N);
 
-dims.set('nx', 0, 0);
-dims.set('nx', nx, 1, N);
-dims.set('nu', nu, 0, N-1);
-dims.set('nu', 0, N);
-dims.set('nbx', 0, 0);
-dims.set('nbx', nx, 1, N-1);
-dims.set('nbu', nu, 0, N-1);
-dims.set('nbu', 0, N);
-dims.set('ng', 0, 0);
-dims.set('ng', npc, 1, N-1);
-%dims.set('nsbx', 0, 0, N-1);
-%dims.set('nsbu', 0, 0, N-1)
-%dims.set('nsg', 0, 0);
-%dims.set('nsg', ns, 1, N-1);
-
-%dims.print_C_struct();
-
+dims.set('nx', 0, 0); % states number for 0 iter
+dims.set('nx', nx, 1, N); % states number for 1 to N iters
+dims.set('nu', nu, 0, N-1); % inputs number for 0 to N-1 iters
+dims.set('nu', 0, N); % inputs number for N iter
+dims.set('nbx', 0, 0); % box states constraints number for 0 iter  
+dims.set('nbx', nx, 1, N); % box states constraints number for 1 to N iters
+dims.set('nbu', nu, 0, N-1); % box inputs constraints number fot 1 to N-1 iters
+dims.set('nbu', 0, N); % box inputs constraints number for N iter
+%dims.set('ng', 0, 0); % polytopic constraints number for 0 iter
+%dims.set('ng', npc, 1, N-1); % polytopic constraints number for 1 to N-1 iters
+%dims.set('nsg', 0, 0); % polytopic soft constraints number for 0 iter
+%dims.set('nsg', ns, 1, N-1); % polytopic soft constraints number for 1 to N-1 iters
 
 % qp
 qp = hpipm_ocp_qp(dims);
 %% Dynamics
-%x0 = blkdiag(MPC_vars.Tx,MPC_vars.Tu)*[stage(1).x0;stage(1).u0];
 b0 = stages(1).linModel.a * stateToVector(x0) + stages(1).linModel.g;
 for i = 0:N-1
     if i == 0
@@ -75,8 +67,8 @@ for i = 0:N-1
     end
 end
 
-%% Cost
-for i = 0:N-1
+%% Cost (Without the cost of polytopic soft constraints)
+for i = 0:N
     qp.set('Q', stages(i+1).costMat.Q, i);
     qp.set('R', stages(i+1).costMat.R, i);
     qp.set('S', stages(i+1).costMat.S, i);
@@ -89,17 +81,17 @@ for i = 0:N-1
     %    qp.set('zu', stages(i+1).costMat.z, i);
     %end
 end
-%% Polytopic Constraints
-for i = 1:N-1
-    qp.set('C', stages(i+1).constrainsMat.c, i);
-    qp.set('D', stages(i+1).constrainsMat.d, i);
-    qp.set('lg', stages(i+1).constrainsMat.dl, i);
-    qp.set('ug', stages(i+1).constrainsMat.du, i);
-end
+%% Polytopic Constraints (Disableb for now)
+%for i = 1:N-1
+%    qp.set('C', stages(i+1).constrainsMat.c, i);
+%    qp.set('D', stages(i+1).constrainsMat.d, i);
+%    qp.set('lg', stages(i+1).constrainsMat.dl, i);
+%    qp.set('ug', stages(i+1).constrainsMat.du, i);
+%end
 
 %% Bounds
 qp.set('Jbu', eye(4), 0, N-1);
-qp.set('Jbx', eye(11), 1, N-1);
+qp.set('Jbx', eye(11), 1, N);
 qp.set('lbu', stages(1).lBoundsU, 0);
 qp.set('ubu', stages(1).uBoundsU, 0);
 for i = 1:N-1
@@ -108,16 +100,15 @@ for i = 1:N-1
     qp.set('lbu', stages(i+1).lBoundsU,i);
     qp.set('ubu', stages(i+1).uBoundsU,i);
 end
+qp.set('lbx', stages(N+1).lBoundsX,N);
+qp.set('ubx', stages(N+1).uBoundsX,N);
 
-%% Soft Constraints
+%% Soft Constraints (Disableb for now)
 %for i = 0:N-1
 %    if stages(i+1).ns ~= 0
 %        
 %    end
 %end
-
-    
-%qp.print_C_struct();
 
 
 %%
@@ -133,7 +124,7 @@ mode = 'speed';
 arg = hpipm_ocp_qp_solver_arg(dims, mode);
 
 %arg.set('mu0', 1e0);
-arg.set('iter_max', 60);
+arg.set('iter_max', 20);
 %arg.set('tol_stat', 1e-6);
 %arg.set('tol_eq', 1e-6);
 %arg.set('tol_ineq', 1e-6);
@@ -143,7 +134,6 @@ arg.set('iter_max', 60);
 
 % set up solver
 solver = hpipm_ocp_qp_solver(dims, arg);
-
 
 % solve qp
 qptime = tic;
@@ -158,13 +148,27 @@ fprintf('HPIPM returned with flag %d ', returnFlag);
 
 if returnFlag==0
     fprintf('-> QP solved\n')
-%     qp_sol.print_C_struct()
 else
     fprintf('-> Solver failed!\n')
 end
 
-optimalSolution(N+1) = OptVariables();
+time_ext = solver.get('time_ext');
+iter = solver.get('iter');
+resStat = solver.get('max_res_stat');
+resEq = solver.get('max_res_eq');
+resIneq = solver.get('max_res_ineq');
+resComp = solver.get('max_res_comp');
+stat = solver.get('stat');
+fprintf('\nprint solver statistics\n');
+fprintf('solve time of last run (measured in mex interface): %e [s]\n', time_ext);
+fprintf('\nipm residuals max: res_g = %e, res_b = %e, res_d = %e, res_m = %e\n', resStat,resEq, resIneq, resComp);
+fprintf('iter\talpha_aff\tmu_aff\t\tsigma\t\talpha_prim\talpha_dual\tmu\t\tres_stat\tres_eq\t\tres_ineq\tres_comp\n');
+for ii=1:iter+1
+    fprintf('%d\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\t%e\n', stat(ii,1), stat(ii,2), stat(ii,3), stat(ii,4), stat(ii,5), stat(ii,6), stat(ii,7), stat(ii,8), stat(ii,9), stat(ii,10), stat(ii,11));
+end
 
+
+optimalSolution(N+1) = OptVariables();
 optimalSolution(1).xk.setZero();
 
 for i = 1:N
