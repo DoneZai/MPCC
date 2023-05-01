@@ -29,16 +29,19 @@ classdef ArcLengthSpline < handle
       end
 
       function sPath = getPosition(obj,s)
+          sPath = zeros(2,1);
           sPath(1) = obj.d_splineX.getPoint(s);
           sPath(2) = obj.d_splineY.getPoint(s);
       end
 
       function dsPath = getDerivative(obj,s)
+          dsPath = zeros(2,1);
           dsPath(1) = obj.d_splineX.getDerivative(s);
           dsPath(2) = obj.d_splineY.getDerivative(s);
       end
 
       function ddsPath = getSecondDerivative(obj,s)
+          ddsPath = zeros(2,1);
           ddsPath(1) = obj.d_splineX.getSecondDerivative(s);
           ddsPath(2) = obj.d_splineY.getSecondDerivative(s);
       end
@@ -48,6 +51,7 @@ classdef ArcLengthSpline < handle
       end
 
       function sGuess = projectOnSpline(obj,x)
+          pos = zeros(2,1);
           pos(1) = x.x;
           pos(2) = x.y;
           sGuess = x.s;
@@ -57,8 +61,8 @@ classdef ArcLengthSpline < handle
           dist = norm(pos - posPath);
         
           if dist >= obj.d_parameters.maxDistProj
-            % std::cout << "dist too large" << std::endl;
-            diffXAll = obj.d_pathData.x -pos(1);
+            disp('dist too large');
+            diffXAll = obj.d_pathData.x - pos(1);
             diffYAll = obj.d_pathData.y - pos(2);
             distSquare = diffXAll.^2 + diffYAll.^2;
             [~, minIndex] = min(distSquare);
@@ -84,6 +88,7 @@ classdef ArcLengthSpline < handle
             end
             sOld = sOpt;
           end
+          disp('strange problems occured');
           % something is strange if it did not converge within 20 iterations, give back the initial guess
       end
 
@@ -97,10 +102,10 @@ classdef ArcLengthSpline < handle
         function setData(obj,xIn,yIn)
           % set input data if x and y have same length
           % compute arc length based on an piecewise linear approximation
-          if size(xIn,2) == size(yIn,2)
+          if size(xIn,1) == size(yIn,1)
             obj.d_pathData.x = xIn;
             obj.d_pathData.y = yIn;
-            obj.d_pathData.nPoints = size(xIn,2);
+            obj.d_pathData.nPoints = size(xIn,1);
             obj.d_pathData.s = compArcLength(xIn, yIn);
           else
             disp("input data does not have the same length");
@@ -110,10 +115,10 @@ classdef ArcLengthSpline < handle
         function setRegularData(obj,xIn,yIn,sIn)
           % set final x-y data if x and y have same length
           % x-y points are space such that they are very close to arc length parametrized
-          if size(xIn,2) == size(yIn,2)
+          if size(xIn,1) == size(yIn,1)
             obj.d_pathData.x = xIn;
             obj.d_pathData.y = yIn;
-            obj.d_pathData.nPoints = size(xIn,2);
+            obj.d_pathData.nPoints = size(xIn,1);
             obj.d_pathData.s = sIn;
           else
             disp("input data does not have the same length");
@@ -123,10 +128,10 @@ classdef ArcLengthSpline < handle
 
         function s = compArcLength(obj,xIn,yIn)
         % compute arc length based on straight line distance between the data points
-          nPoints = size(xIn,2);
+          nPoints = size(xIn,1);
           % initailize s as zero
      
-          s = zeros(nPoints);
+          s = zeros(nPoints,1);
           %    std::cout << xIn << std::endl;
           for i = 1:(nPoints - 1)
             dx = xIn(i + 1) - xIn(i);
@@ -147,11 +152,11 @@ classdef ArcLengthSpline < handle
             % equilly spaced between 0 and current length of path
             NSpline = obj.d_config.NSpline;
             resampledPath.nPoints = NSpline;
-            resampledPath.s = linspace(0, totalArcLength, NSpline);
+            resampledPath.s = linspace(0, totalArcLength, NSpline)';
             
             % initialize new points as zero
-            resampledPath.x = zeros(NSpline);
-            resampledPath.y = zeros(NSpline);
+            resampledPath.x = zeros(NSpline,1);
+            resampledPath.y = zeros(NSpline,1);
             
             % extract X-Y points
             for i = 1:NSpline
@@ -168,19 +173,19 @@ classdef ArcLengthSpline < handle
               k = 1;  % indecies
               j = 1;
             
-              if size(xOriginal,2) ~= size(yOriginal,2)
+              if size(xOriginal,1) ~= size(yOriginal,1)
                 disp('error')
               end
               %    std::cout << xOriginal << std::endl;
             
-              nPoints = size(xOriginal,2);
+              nPoints = size(xOriginal,1);
             
               % initialize with zero
-              resampledPath.x = zeros(nPoints);
-              resampledPath.y = zeros(nPoints);
+              resampledPath.x = zeros(nPoints,1);
+              resampledPath.y = zeros(nPoints,1);
             
               % compute distance between points in X-Y data
-              distVec = zeros(nPoints - 1);
+              distVec = zeros(nPoints - 1,1);
               for i = 1:(nPoints - 1)
                 dx = xOriginal(i + 1) - xOriginal(i);
                 dy = yOriginal(i + 1) - yOriginal(i);
@@ -226,7 +231,7 @@ classdef ArcLengthSpline < handle
               % temporary spline class only used for fitting
               sApproximation = obj.compArcLength(x, y);
               %    std::cout << sApproximation << std::endl;
-              totalArcLength = sApproximation(size(sApproximation,2));
+              totalArcLength = sApproximation(size(sApproximation,1));
             
               firstSplineX = CubicSpline();
               firstSplineY = CubicSpline();
@@ -239,7 +244,7 @@ classdef ArcLengthSpline < handle
               firstRefinedPath = obj.resamplePath(firstSplineX, firstSplineY, totalArcLength);
               sApproximation = obj.compArcLength(firstRefinedPath.x, firstRefinedPath.y);
             
-              totalArcLength = sApproximation(size(sApproximation,2));
+              totalArcLength = sApproximation(size(sApproximation,1));
               %//////////////////////////////////////////
               % 2. spline fit
               secondSplineX.genSpline(sApproximation, firstRefinedPath.x, false);
