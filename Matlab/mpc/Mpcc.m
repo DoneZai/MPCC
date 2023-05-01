@@ -102,7 +102,7 @@ classdef Mpcc < handle
             if obj.d_nNonSolves >= obj.d_nReset
               obj.d_validInitialGuess = false;
             end
-            mpcReturn = MPCReturn(obj.d_initialGuess(2).xk, obj.d_initialGuess(1).uk, obj.d_initialGuess);
+            mpcReturn = MPCReturn(obj.d_initialGuess(2).xk, obj.d_initialGuess(1).uk, obj.d_initialGuess,obj.d_stages,solverStatus);
         end
 
         function setTrack(obj,x,y)
@@ -120,7 +120,8 @@ classdef Mpcc < handle
             for i = 1:obj.d_config.N
                 obj.setStage(obj.d_initialGuess(i).xk, obj.d_initialGuess(i).uk, obj.d_initialGuess(i + 1).xk, i);
             end
-            obj.setStage(obj.d_initialGuess(obj.d_config.N+1).xk, obj.d_initialGuess(obj.d_config.N+1).uk, State(0,0,0,0,0,0,0,0,0,0,0), obj.d_config.N+1);
+            xk1Nz = vectorToState(obj.d_model.ode4(obj.d_initialGuess(obj.d_config.N+1).xk,obj.d_initialGuess(obj.d_config.N+1).uk,obj.d_ts));
+            obj.setStage(obj.d_initialGuess(obj.d_config.N+1).xk, obj.d_initialGuess(obj.d_config.N+1).uk, xk1Nz, obj.d_config.N+1);
         end
 
         function setStage(obj,xk,uk,xk1,timeStep)
