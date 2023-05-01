@@ -1,4 +1,4 @@
-classdef State < handle
+classdef State < matlab.mixin.Copyable
     %STATE Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -65,9 +65,9 @@ classdef State < handle
         function vxNonZero(obj,vxZero)
             if obj.vx < vxZero
               obj.vx = vxZero;
-              obj.vy = 0.0;
-              obj.r = 0.0;
-              obj.steeringAngle = 0.0;
+              %obj.vy = 0.0;
+              %obj.r = 0.0;
+              %obj.steeringAngle = 0.0;
             end
         end
     end
