@@ -201,7 +201,7 @@ classdef Cost
             % zero order term of beta approximation
             betaZero = atan(vy / vx) - dBeta * stateToVector(state);
             % QBeta = (qBeta*beta)^2 ~ x^T (qBeta*dBeta^T*dBeta) x + (qBeta*2*BetaZero*qBeta)^ x + const
-            QBeta = 2.0 * obj.d_costParameters.qBeta * dBeta' * dBeta;
+            QBeta = 2.0 * obj.d_costParameters.qBeta * (dBeta' * dBeta);
             qBeta = obj.d_costParameters.qBeta * 2.0 * betaZero * dBeta';
             betaCost =  CostMatrix(QBeta, zeros(4,4), zeros(11,4), qBeta, zeros(4,1), zeros(2,2), zeros(2,1));
         end
@@ -223,7 +223,7 @@ classdef Cost
             betaZero = atan(tan(steeringAngle) * relCenter) - atan(vy / vx) -...
                                     dBeta * stateToVector(state);
             % QBeta = (qBeta*beta)^2 ~ x^T (qBeta*dBeta^T*dBeta) x + (qBeta*2*BetaZero*qBeta)^ x + const
-            QBeta = 2.0 * obj.d_costParameters.qBeta * dBeta' * dBeta;
+            QBeta = 2.0 * obj.d_costParameters.qBeta * (dBeta' * dBeta);
             qBeta = obj.d_costParameters.qBeta * 2.0 * betaZero * dBeta';
             betaKinCost = CostMatrix(QBeta, zeros(4,4), zeros(11,4), qBeta, zeros(4,1), zeros(2,2), zeros(2,1));
         end
