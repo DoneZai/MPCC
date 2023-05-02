@@ -14,13 +14,13 @@ fi
 export ENV_RUN=true
 
 # if hpipm folder not specified assume alongside the parent of this folder
-HPIPM_MAIN_FOLDER=${HPIPM_MAIN_FOLDER:-"$(pwd)/../../hpipm"}
+HPIPM_MAIN_FOLDER=${HPIPM_MAIN_FOLDER:-"$(pwd)/../external/hpipm"}
 export HPIPM_MAIN_FOLDER
 echo
 echo "HPIPM_MAIN_FOLDER=$HPIPM_MAIN_FOLDER"
 
 # if blasfeo folder not specified assume alongside the parent of this folder
-BLASFEO_MAIN_FOLDER=${BLASFEO_MAIN_FOLDER:-"$(pwd)/../../blasfeo"}
+BLASFEO_MAIN_FOLDER=${BLASFEO_MAIN_FOLDER:-"$(pwd)/../external/blasfeo"}
 export BLASFEO_MAIN_FOLDER
 echo
 echo "BLASFEO_MAIN_FOLDER=$BLASFEO_MAIN_FOLDER"
