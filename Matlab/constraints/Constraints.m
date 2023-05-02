@@ -19,7 +19,7 @@ classdef Constraints
             % compute all the polytrophic state constraints
             % compute the three constraints
             trackConstraints = obj.getTrackConstraints(track, x);
-            %alphaConstraintsFront = obj.getAlphaConstraintFront(x);
+            alphaConstraintsFront = obj.getAlphaConstraintFront(x);
 
             cConstrainsMatrix = zeros(obj.d_config.NPC,obj.d_config.NX);
             dlConstrainsMatrix = zeros(obj.d_config.NPC,1);
@@ -29,9 +29,9 @@ classdef Constraints
             dlConstrainsMatrix(obj.d_config.siIndex.conTrack) = trackConstraints.dlI;
             duConstrainsMatrix(obj.d_config.siIndex.conTrack) = trackConstraints.duI;
 
-            %cConstrainsMatrix(obj.d_config.siIndex.conAlpha,:) = alphaConstraintsFront.cI;
-            %dlConstrainsMatrix(obj.d_config.siIndex.conAlpha) = alphaConstraintsFront.dlI;
-            %duConstrainsMatrix(obj.d_config.siIndex.conAlpha) = alphaConstraintsFront.duI;
+            cConstrainsMatrix(obj.d_config.siIndex.conAlpha,:) = alphaConstraintsFront.cI;
+            dlConstrainsMatrix(obj.d_config.siIndex.conAlpha) = alphaConstraintsFront.dlI;
+            duConstrainsMatrix(obj.d_config.siIndex.conAlpha) = alphaConstraintsFront.duI;
 
             % TODO consider the zero order term directly in the functions constructing the constraints
             dlConstrainsMatrix = dlConstrainsMatrix - cConstrainsMatrix * stateToVector(x);
