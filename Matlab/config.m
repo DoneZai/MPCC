@@ -3,8 +3,8 @@ function config = config()
     config.NU  = 4;
     
     config.NB = 11;  % max number of bounds
-    config.NPC = 1;  % number of polytopic constraints
-    config.NS = 1;
+    config.NPC = 2;  % number of polytopic constraints
+    config.NS = 2; % number of soft constraints
 
     config.N = 50;
     config.NSpline = 5000;
