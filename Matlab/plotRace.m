@@ -116,6 +116,8 @@ function plotRace(log,track,trackCenter,parameters,config)
         solverStatusVec(i) = log(i).solverStatus;
     end
     plot(1:plotSize, solverStatusVec);
+
+    legend('solver status');
     
     %% Control inputs
     figure(10);

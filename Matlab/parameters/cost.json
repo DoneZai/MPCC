@@ -1,5 +1,5 @@
 {
-    "qC": 1.0,
+    "qC": 0.01,
     "qL": 1000.0,
     "qVs": 0.2,
     
@@ -7,7 +7,7 @@
     
     "qR": 1E-4,
     
-    "qBeta": 5E0,
+    "qBeta": 10E0,
     "betaKinCost": 1,
     
     "rThrottle": 1E-3,

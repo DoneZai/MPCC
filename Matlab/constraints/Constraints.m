@@ -19,7 +19,7 @@ classdef Constraints
             % compute all the polytrophic state constraints
             % compute the three constraints
             trackConstraints = obj.getTrackConstraints(track, x);
-            alphaConstraintsFront = obj.getAlphaConstraintFront(x);
+            %alphaConstraintsFront = obj.getAlphaConstraintFront(x);
 
             cConstrainsMatrix = zeros(obj.d_config.NPC,obj.d_config.NX);
             dlConstrainsMatrix = zeros(obj.d_config.NPC,1);
@@ -29,9 +29,9 @@ classdef Constraints
             dlConstrainsMatrix(obj.d_config.siIndex.conTrack) = trackConstraints.dlI;
             duConstrainsMatrix(obj.d_config.siIndex.conTrack) = trackConstraints.duI;
 
-            cConstrainsMatrix(obj.d_config.siIndex.conAlpha,:) = alphaConstraintsFront.cI;
-            dlConstrainsMatrix(obj.d_config.siIndex.conAlpha) = alphaConstraintsFront.dlI;
-            duConstrainsMatrix(obj.d_config.siIndex.conAlpha) = alphaConstraintsFront.duI;
+            %cConstrainsMatrix(obj.d_config.siIndex.conAlpha,:) = alphaConstraintsFront.cI;
+            %dlConstrainsMatrix(obj.d_config.siIndex.conAlpha) = alphaConstraintsFront.dlI;
+            %duConstrainsMatrix(obj.d_config.siIndex.conAlpha) = alphaConstraintsFront.duI;
 
             % TODO consider the zero order term directly in the functions constructing the constraints
             dlConstrainsMatrix = dlConstrainsMatrix - cConstrainsMatrix * stateToVector(x);
@@ -54,7 +54,7 @@ classdef Constraints
             posOuter = posCenter + obj.d_parameters.rOut * tanCenter;
             posInner = posCenter - obj.d_parameters.rIn * tanCenter;
             % Define track Jacobian as Perpendicular vector
-            CTrackConstraint = zeros(1,11);
+            CTrackConstraint = zeros(1,obj.d_config.NX);
             CTrackConstraint(1, 1) = tanCenter(1);
             CTrackConstraint(1, 2) = tanCenter(2);
             % Compute bounds
@@ -81,7 +81,7 @@ classdef Constraints
             dSa = obj.d_model.getFrontSaDerivatives(x);
             % const UxDerivatives dUx = d_model.getFrontUxDerivatives(x);
             % const UyDerivatives dUy = d_model.getFrontUyDerivatives(x);
-            jacAlphaCon = zeros(1,11);
+            jacAlphaCon = zeros(1,obj.d_config.NX);
             jacAlphaCon(obj.d_config.siIndex.vx) = dSa.dVx;
             jacAlphaCon(obj.d_config.siIndex.vy) = dSa.dVy;
             jacAlphaCon(obj.d_config.siIndex.r) = dSa.dR;

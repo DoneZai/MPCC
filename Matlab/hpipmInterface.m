@@ -29,8 +29,10 @@ end
 
 nx = config.NX; % number of state variables
 nu = config.NU; % number of input variables
-%ns = config.NS; % number of soft constraints
-%npc = config.NPC; % number of polytopic constraints
+nbx = nx; % number of box constraints on state
+nbu = nu; % number of box constraints on input
+ns = config.NS; % number of soft constraints
+npc = config.NPC; % number of polytopic constraints
 
 N = config.N; % iters (horizon length)
 
@@ -44,13 +46,13 @@ dims.set('nx', nx, 1, N); % states number for 1 to N iters
 dims.set('nu', nu, 0, N-1); % inputs number for 0 to N-1 iters
 dims.set('nu', 0, N); % inputs number for N iter
 dims.set('nbx', 0, 0); % box states constraints number for 0 iter  
-dims.set('nbx', nx, 1, N); % box states constraints number for 1 to N iters
-dims.set('nbu', nu, 0, N-1); % box inputs constraints number fot 1 to N-1 iters
+dims.set('nbx', nbx, 1, N); % box states constraints number for 1 to N iters
+dims.set('nbu', nbu, 0, N-1); % box inputs constraints number fot 1 to N-1 iters
 dims.set('nbu', 0, N); % box inputs constraints number for N iter
-%dims.set('ng', 0, 0); % polytopic constraints number for 0 iter
-%dims.set('ng', npc, 1, N-1); % polytopic constraints number for 1 to N-1 iters
-%dims.set('nsg', 0, 0); % polytopic soft constraints number for 0 iter
-%dims.set('nsg', ns, 1, N-1); % polytopic soft constraints number for 1 to N-1 iters
+dims.set('ng', 0, 0); % polytopic constraints number for 0 iter
+dims.set('ng', npc, 1, N); % polytopic constraints number for 1 to N-1 iters
+dims.set('ns', 0, 0); % soft constraints number for 0 iter
+dims.set('ns', ns, 1, N); % soft constraints number for 1 to N-1 iters
 
 % qp
 qp = hpipm_ocp_qp(dims);
@@ -67,27 +69,31 @@ for i = 0:N-1
     end
 end
 
-%% Cost (Without the cost of polytopic soft constraints)
-for i = 0:N
+%% Cost
+qp.set('Q', stages(1).costMat.Q, 0);
+qp.set('R', stages(1).costMat.R, 0);
+qp.set('S', stages(1).costMat.S, 0);
+qp.set('q', stages(1).costMat.q, 0);
+qp.set('r', stages(1).costMat.r, 0);
+for i = 1:N
     qp.set('Q', stages(i+1).costMat.Q, i);
     qp.set('R', stages(i+1).costMat.R, i);
     qp.set('S', stages(i+1).costMat.S, i);
     qp.set('q', stages(i+1).costMat.q, i);
     qp.set('r', stages(i+1).costMat.r, i);
-    %if stages(i+1).ns ~= 0.0
-    %    qp.set('Zl', stages(i+1).costMat.Z, i);
-    %    qp.set('Zu', stages(i+1).costMat.Z, i);
-    %    qp.set('zl', stages(i+1).costMat.z, i);
-    %    qp.set('zu', stages(i+1).costMat.z, i);
-    %end
+    qp.set('Zl', stages(i+1).costMat.Z, i);
+    qp.set('Zu', stages(i+1).costMat.Z, i);
+    qp.set('zl', stages(i+1).costMat.z, i);
+    qp.set('zu', stages(i+1).costMat.z, i);
 end
-%% Polytopic Constraints (Disableb for now)
-%for i = 1:N-1
-%    qp.set('C', stages(i+1).constrainsMat.c, i);
-%    qp.set('D', stages(i+1).constrainsMat.d, i);
-%    qp.set('lg', stages(i+1).constrainsMat.dl, i);
-%    qp.set('ug', stages(i+1).constrainsMat.du, i);
-%end
+
+%% Polytopic Constraints
+for i = 1:N
+    qp.set('C', stages(i+1).constrainsMat.c, i);
+    qp.set('D', stages(i+1).constrainsMat.d, i);
+    qp.set('lg', stages(i+1).constrainsMat.dl, i);
+    qp.set('ug', stages(i+1).constrainsMat.du, i);
+end
 
 %% Bounds
 qp.set('Jbu', eye(4), 0, N-1);
@@ -103,13 +109,12 @@ end
 qp.set('lbx', stages(N+1).lBoundsX,N);
 qp.set('ubx', stages(N+1).uBoundsX,N);
 
-%% Soft Constraints (Disableb for now)
-%for i = 0:N-1
-%    if stages(i+1).ns ~= 0
-%        
-%    end
-%end
-
+%% Soft Constraints
+qp.set('Jsg', eye(npc,ns),1,N);
+qp.set('Jsx', zeros(nbx,ns),1,N);
+qp.set('Jsu', zeros(nbu,ns),1,N);
+qp.set('lus', zeros(ns,1),1,N);
+qp.set('lls', zeros(ns,1),1,N);
 
 %%
 qp_sol = hpipm_ocp_qp_sol(dims);

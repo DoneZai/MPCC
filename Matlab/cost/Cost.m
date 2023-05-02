@@ -230,13 +230,13 @@ classdef Cost
 
         function softConstraintsCost = getSoftConstraintCost(obj)
             % input cost and rate of chagen of real inputs
-            ZCost = eye(2);
-            zCost = ones(2,1);
+            ZCost = eye(obj.d_config.NS);
+            zCost = ones(obj.d_config.NS,1);
             % cost of "real" inputs
             ZCost(obj.d_config.siIndex.conTrack, obj.d_config.siIndex.conTrack) = obj.d_costParameters.scQuadTrack;
-            ZCost(obj.d_config.siIndex.conAlpha, obj.d_config.siIndex.conAlpha) = obj.d_costParameters.scQuadAlpha;
+            %ZCost(obj.d_config.siIndex.conAlpha, obj.d_config.siIndex.conAlpha) = obj.d_costParameters.scQuadAlpha;
             zCost(obj.d_config.siIndex.conTrack) = obj.d_costParameters.scLinTrack;
-            zCost(obj.d_config.siIndex.conAlpha) = obj.d_costParameters.scLinAlpha;
+            %zCost(obj.d_config.siIndex.conAlpha) = obj.d_costParameters.scLinAlpha;
             softConstraintsCost = CostMatrix(zeros(11,11), zeros(4,4), zeros(11,4), zeros(11,1), zeros(4,1), ZCost, zCost);
         end
 
