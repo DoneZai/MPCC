@@ -1,14 +1,14 @@
 function plotRace(log,track,trackCenter,parameters,config)
-    plotSize = size(log,2);
-    stateVec = zeros(config.NX,plotSize);
- 
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
-    end
     
     %% race track and car state in X,Y coords
     figure(1);
     hold on;
+
+    plotSize = size(log,2);
+    stateVec = zeros(config.NX,plotSize);
+    for i = 1:plotSize
+        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
+    end
 
     plot(track.xOuter,track.yOuter,'b');
     plot(track.xInner,track.yInner,'y');
@@ -16,23 +16,38 @@ function plotRace(log,track,trackCenter,parameters,config)
     plot(stateVec(1,:),stateVec(2,:),'g');
     legend('outer_border','inner_border','center_line','state');
 
-    %% frontSa and steeringAngle
+    %% frontSa, rearSa and steeringAngle
     figure(2);
     hold on;
+
+    plotSize = size(log,2);
+    stateVec = zeros(config.NX,plotSize);
+    for i = 1:plotSize
+        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
+    end
     
     frontSaVec = zeros(1,plotSize);
+    rearSaVec = zeros(1,plotSize);
     
     for i = 1:plotSize
         frontSaVec(i) = atan2(stateVec(5,i) + parameters.car.lf * stateVec(6,i),stateVec(4,i)) - stateVec(9,i);
+        rearSaVec(i) = atan2(stateVec(5,i) - parameters.car.lr * stateVec(6,i),stateVec(4,i));
     end
         
-    plot(1:plotSize, frontSaVec); 
+    plot(1:plotSize, frontSaVec);
+    plot(1:plotSize, rearSaVec);
     plot(1:plotSize, stateVec(9,:));
-    legend('frontSa','steeringAngle');
+    legend('frontSa','rearSa','steeringAngle');
     
     %% throttle, steeringAngle and brakes
     figure(3);
     hold on;
+
+    plotSize = size(log,2);
+    stateVec = zeros(config.NX,plotSize);
+    for i = 1:plotSize
+        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
+    end
 
     plot(1:plotSize, stateVec(8,:));
     plot(1:plotSize, stateVec(9,:));
@@ -43,28 +58,41 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(4);
     hold on;
 
+    plotSize = size(log,2);
+    stateVec = zeros(config.NX,plotSize);
+    for i = 1:plotSize
+        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
+    end
+
     plot(1:plotSize, stateVec(7,:));
     plot(1:plotSize, stateVec(11,:));
     legend('s','vs');
 
     %% vs(s)
     figure(5)
+
+    plotSize = size(log,2);
+    stateVec = zeros(config.NX,plotSize);
+    for i = 1:plotSize
+        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
+    end
+
     plot(stateVec(7,:),stateVec(11,:));
     legend('vs');
 
     %% horizon
     figure(6);
     hold on;
+
+    plotSize = size(log,2);
+    stateVec = zeros(config.NX,plotSize);
+    for i = 1:plotSize
+        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
+    end
     
     plot(track.xOuter,track.yOuter,'b');
     plot(track.xInner,track.yInner,'y');
     plot(trackCenter.x,trackCenter.y);
-
-    stateVec = zeros(config.NX,plotSize);
-    
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
-    end
 
     plot(stateVec(1,:),stateVec(2,:),'g','LineWidth',1);
 
@@ -81,6 +109,8 @@ function plotRace(log,track,trackCenter,parameters,config)
     %% steeringAngle
     figure(7);
 
+    plotSize = size(log,2);
+
     steeringAngle = zeros(1,plotSize);
     
     for i = 1:plotSize
@@ -93,7 +123,9 @@ function plotRace(log,track,trackCenter,parameters,config)
     %% vx vy r throttle steeringAngle brakes
     figure(8)
     hold on;
- 
+
+    plotSize = size(log,2);
+    stateVec = zeros(config.NX,plotSize);
     for i = 1:plotSize
         stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
     end
@@ -110,6 +142,7 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(9);
     hold on;
 
+    plotSize = size(log,2);
     solverStatusVec = zeros(1,plotSize);
 
     for i = 1:plotSize
@@ -122,7 +155,8 @@ function plotRace(log,track,trackCenter,parameters,config)
     %% Control inputs
     figure(10);
     hold on;
-
+    
+    plotSize = size(log,2);
     inputVec = zeros(config.NU,plotSize);
     
     for i = 1:plotSize
