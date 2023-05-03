@@ -30,21 +30,21 @@ config = config();
 
 % uncomment 33,34,36,37,39,40,42 to use FSG track
 
-%trackNameFile = 'FSG.mat'; %track name
-%load(trackNameFile);
+trackNameFile = 'FSG.mat'; %track name
+load(trackNameFile);
 
-%cones_blue(:,1) = cones_blue(:,1) + 30;
-%cones_blue(:,2) = cones_blue(:,2) + 80;
+cones_blue(:,1) = cones_blue(:,1) + 30;
+cones_blue(:,2) = cones_blue(:,2) + 80;
 
-%cones_yellow(:,1) = cones_yellow(:,1) + 30;
-%cones_yellow(:,2) = cones_yellow(:,2) + 80;
+cones_yellow(:,1) = cones_yellow(:,1) + 30;
+cones_yellow(:,2) = cones_yellow(:,2) + 80;
 
-%track = Track(cones_blue, cones_yellow);
+track = Track(cones_blue, cones_yellow);
 
 %uncomment 46,47 to use MPCC track for the fullscale
 
-[cones_blue,cones_yellow,center_line] = generateTestTrack();
-track = Track(cones_blue,cones_yellow,center_line);
+%[cones_blue,cones_yellow,center_line] = generateTestTrack();
+%track = Track(cones_blue,cones_yellow,center_line);
 
 parameters = Parameters(config);
 
