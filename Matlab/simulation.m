@@ -30,21 +30,39 @@ config = config();
 
 % uncomment 33,34,36,37,39,40,42 to use FSG track
 
-trackNameFile = 'FSG.mat'; %track name
-load(trackNameFile);
+%trackNameFile = 'FSG.mat'; %track name
+%load(trackNameFile);
 
-cones_blue(:,1) = cones_blue(:,1) + 30;
-cones_blue(:,2) = cones_blue(:,2) + 80;
+%cones_blue(:,1) = cones_blue(:,1) + 30;
+%cones_blue(:,2) = cones_blue(:,2) + 80;
 
-cones_yellow(:,1) = cones_yellow(:,1) + 30;
-cones_yellow(:,2) = cones_yellow(:,2) + 80;
+%cones_yellow(:,1) = cones_yellow(:,1) + 30;
+%cones_yellow(:,2) = cones_yellow(:,2) + 80;
 
-track = Track(cones_blue, cones_yellow);
+%track = Track(cones_blue, cones_yellow);
 
 %uncomment 46,47 to use MPCC track for the fullscale
 
-%[cones_blue,cones_yellow,center_line] = generateTestTrack();
-%track = Track(cones_blue,cones_yellow,center_line);
+[cones_blue,cones_yellow,center_line] = generateTestTrack();
+track = Track(cones_blue,cones_yellow,center_line);
+
+%uncomment 51,52,53,55,56,58,59,61,62,64 to use presplined FSG track from
+%nirajbasnet
+
+%trackOuterTable = readtable('track_outer.csv');
+%trackInnerTable = readtable('track_inner.csv');
+%trackCenterTable = readtable('track_center.csv');
+
+%trackOuter(:,1) = trackOuterTable.Var1;
+%trackOuter(:,2) = trackOuterTable.Var2;
+
+%trackInner(:,1) = trackInnerTable.Var1;
+%trackInner(:,2) = trackInnerTable.Var2;
+
+%trackCenter(:,1) = trackCenterTable.Var1;
+%trackCenter(:,2) = trackCenterTable.Var2;
+
+%track = Track(trackOuter,trackInner,trackCenter);
 
 parameters = Parameters(config);
 
