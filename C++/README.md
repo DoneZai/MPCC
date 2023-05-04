@@ -40,7 +40,7 @@ Currently, only one track and car model is implemented. However, adapting the pa
 
 ## Installation 
 
-To install additional dependencies for running **C++** version run **install.sh** from the <MPCC/C++> folder
+To install additional dependencies for running **C++** version run **install.sh** from the `MPCC/C++` folder
 ```bash
 ./install.sh
 ```
@@ -52,7 +52,7 @@ Note that `matplotlib-cpp` does also require `Python-2.7` or `Python-3` and `mat
 
 Once all dependencies are installed `cmake` can be used to build the project
 
-First of all you need to build and run ADCodeGen by running commands from the <MPCC/C++> folder:
+First of all you need to build and run ADCodeGen by running commands from the `MPCC/C++` folder:
 
 ```bash
 cd ADCodeGen
@@ -62,53 +62,39 @@ make -j$(nproc)
 ./ADCodeGen
 ```
 
-Then you need to build MPCC by running commands from the <MPCC/C++> folder:
+Then you need to build MPCC by running commands from the `MPCC/C++` folder:
 ```bash
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
 ```
 
-To run the code simply execute the `MPCC` from the <MPCC/C++/build> folder:
+To run the code simply execute the `MPCC` from the `MPCC/C++/build` folder:
 ```bash
 ./MPCC
-```
-
-## Running instructions for Matlab version of MPCC
-
-1. Open the terminal and navigate inside this rep Matlab folder:
-```bash
-cd MPCC/Matlab
-```
-2. source **env.sh** for **HPIPM** solver with command:
-```bash
-source env.sh
-```
-3. run Matlab from this terminal;
-4. open **simulation.m** script in Matlab and run it. 
+``` 
 
 ## Tracks
 
-By default a track from [**MPCC**](https://github.com/alexliniger/MPCC) **feat/cppad-codegen** branch is used.
+By default a track from [**nirajbasnet**](https://github.com/nirajbasnet/Nonlinear_MPCC_for_autonomous_racing) is used. It is a splined **FSG** track for Formula Student Driverless competitions.
 
-To use other tracks change value of **track_path** parameter in <Params/config.json> file
+To use other tracks change value of **track_path** parameter in `Params/config.json` file
 
 It could be:
-1. **competitions.json**;
-2. **constrictor.json**;
-3. **FSG.json**;
-4. **FSG_nirajbasnet.json**,
-5. **FSI.json**;
-6. **garden.json**;
-7. **hairpins.json**:
-8. **mess.json**;
-9. **peanut.json**:
-10. **rand.json**:
-11. **rectangle.json**:
-12. **small.json**:
-13. **thin.json**.
-
-**Be carefull!!!**, on all other tracks than the default track from the [**MPCC**](https://github.com/alexliniger/MPCC) **fullsize** branch **MPCC** performs bad and unstable for now. 
+1. **tracks/competitions.json**;
+2. **tracks/constrictor.json**;
+3. **tracks/FSG.json**;
+4. **tracks/FSG_nirajbasnet.json**;
+5. **tracks/FSI.json**;
+6. **tracks/garden.json**;
+7. **tracks/hairpins.json**;
+8. **tracks/mess.json**;
+9. **tracks/peanut.json**;
+10. **tracks/rand.json**;
+11. **tracks/rectangle.json**;
+12. **tracks/small.json**;
+13. **tracks/thin.json**;
+14. **tracks/track.json**. 
 
 ### TODO
 
