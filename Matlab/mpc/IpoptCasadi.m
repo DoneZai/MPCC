@@ -18,6 +18,7 @@ classdef IpoptCasadi
         X
         U
         P
+        S
         f
         g
         objective
@@ -42,6 +43,10 @@ classdef IpoptCasadi
             obj.d_ts = parameters.config.ts;
 
             obj.d_track = ArcLengthSpline(config,parameters.mpcModel); 
+        end
+
+        function initMPC()
+            
         end
 
         function setTrack(obj,x,y)
@@ -78,11 +83,6 @@ classdef IpoptCasadi
             controls = [dThrottle,dSteeringAngle,dBrakes];
 
             %Dynamic forces
-            Frx = SX.sym('Frx');
-            Fry = SX.sym('Fry');
-            Ffx = SX.sym('Ffx');
-            Ffy = SX.sym('Ffy');
-
             rDyn = obj.d_car.rDyn;
             
             cdrv = obj.d_car.cm1 * obj.d_car.gearRatio;
@@ -92,16 +92,16 @@ classdef IpoptCasadi
             m = obj.d_car.m;
             lf = obj.d_car.lf;
             lr = obj.d_car.lr;
-            g = obj.d_car.g;
+            gAcc = obj.d_car.g;
             fzNominal = obj.d_car.fzNominal;
 
             % normal load on the one front wheel
-            Ffz = lr * m * g /...
+            Ffz = lr * m * gAcc /...
                           (2.0 * (lf + lr));
             Dffz = (Ffz - fzNominal) / fzNominal;
 
             % normal load on the one rear wheel
-            Frz = lf * m * g /...
+            Frz = lf * m * gAcc /...
                           (2.0 * (lf + lr));
             Drfz = (Frz - fzNominal) / fzNominal;
             
@@ -176,8 +176,10 @@ classdef IpoptCasadi
 
             obj.f = Function('f',{states,controls},{rhs});
             obj.U = SX.sym('U',obj.NU,obj.N);
-            obj.P = SX.sym('P',obj.NX + 2 * obj.N + obj.NU * obj.N);
+            % obj.P = SX.sym('P',obj.NX + 2 * obj.N + obj.NU * obj.N);
             obj.X = SX.sym('X',obj.NX,(obj.N+1));
+            % slack variables matrix for soft constraints
+            obj.S = SX.sym('S',obj.NS,(obj.N+1));
             
             % objective function
             obj.objective = 0;
@@ -186,7 +188,7 @@ classdef IpoptCasadi
             obj.g = [];
             
             % Coeffs for laf and contouring errors penallization
-            obj.Q = zeros(obj.NX,obj.NX);
+            obj.Q = zeros(2,2);
             obj.Q(1,1) = obj.d_parameters.costs.qC;
             obj.Q(2,2) = obj.d_parameters.costs.qL;
             
@@ -220,16 +222,33 @@ classdef IpoptCasadi
                 
                 % base constraint
                 obj.g = [obj.g, stateNext - stateNextRK4];
+            end
+
+            %Track constraint and slip angles constraints
+
+            for i = 1:obj.N+1
+
+                state = obj.X(:,i);
+
+                x = state(1);
+                y = state(2);
+
+                vx = state(4);
+                vy = state(5);
+                r = state(6);
+                steeringAngle = state(9);
 
                 % track constraint: lowerBound <= ax-by <= upperBound,
                 % where a = P(NX + 2*i -1) and b = P(NX + 2*i)
-                obj.g = [obj.g, obj.P(obj.NX + 2*i-1)*stateNext(1) - obj.P(obj.NX + 2*i)*stateNext(2)];
+                obj.g = [obj.g, obj.P(obj.NX + 2*i-1)*x - obj.P(obj.NX + 2*i)*y];
 
-                % front slip angle constraint
-                % saf = atan2((vy + r * lf), vx) - steeringAngle;
-                safg = atan2((obj.X(5,i) + obj.X(6,i)*lf),obj.X(4,i));
-
+                % front slip angle constraint with slack variable
+                safg = atan2((vy + r*lf),vx) - steeringAngle + obj.S(1,i);
                 obj.g = [obj.g,safg];  
+
+                % rear slip angle constraint with slack variable
+                sarg = atan2((vy - r*lr),vx) + obj.S(2,i);
+                obj.g = [obj.g,sarg];     
             end 
         end
 
@@ -258,9 +277,16 @@ classdef IpoptCasadi
 
         function obj = computeCost(obj)
             for i = 1:obj.N
-                stateNext = obj.X(:,i+1);
+                state = obj.X(:,i);
                 control = obj.U(:,i);
-                trackPoint = getRefPoint(stateNext(4));
+                
+                x = state(1);
+                y = state(2);
+                s = state(7);
+                vs = state(11);
+
+
+                trackPoint = getRefPoint(s);
                 
                 % contouring error
                 ec = -sin(trackPoint.thetaRef) * (trackPoint.xRef - x)...
@@ -270,25 +296,18 @@ classdef IpoptCasadi
                                     + sin(trackPoint.thetaRef) * (trackPoint.yRef - y);
                 error = [ec;el];
 
-                controlBeginIndex = obj.NX + 2*obj.N + obj.NU*(i-1) + 1;
-                controlEndIndex = obj.NX + 2*obj.N + obj.NU*i;
-
+                % soft constraints slack variables matrix
+                slacks = obj.S(:,i);
+                
+                % objective function
                 obj.objective = obj.objective + error' * obj.Q * error + ...
-                    (control - obj.P(controlBeginIndex:controlEndIndex))' * obj.R * (control - obj.P(controlBeginIndex:controlEndIndex));
-
-                % front slip angle constraint
-                % saf = atan2((vy + r * lf), vx) - steeringAngle;
-                % safg = atan2((obj.X(5,i) + obj.X(6,i)*lf),obj.X(4,i));
-
-                % rear slip angle constraint
-                % sar = atan2((vy - r * lr), vx);
-                % sarg = atan2((obj.X(5,i) - obj.X(6,i)*lr),obj.X(4,i));
+                    control' * obj.R * control - obj.d_parameters.qVs * vs + slacks' *obj.Z * slacks;
             end 
         end
 
         function obj = initIpoptSolver(obj)
             % make the decision variable one column  vector
-            OPT_variables = [reshape(obj.X,obj.NX*(obj.N+1),1);reshape(obj.U,obj.NU*obj.N,1)];
+            OPT_variables = [reshape(obj.X,obj.NX*(obj.N+1),1);reshape(obj.U,obj.NU*obj.N,1);reshape(obj.S,obj.NS*(obj.N+1),1)];
             nlpProb = struct('f', obj.objective, 'x', OPT_variables, 'g', obj.g, 'p', obj.P);
 
             obj.opts = struct;
@@ -300,14 +319,15 @@ classdef IpoptCasadi
             obj.opts.ipopt.acceptable_tol =1e-8;
             obj.opts.ipopt.acceptable_obj_change_tol = 1e-6;
             obj.opts.ipopt.fixed_variable_treatment = "make_parameter";
-            obj.opts.ipopt.linear_solver = "ma57";
+            % obj.opts.ipopt.linear_solver = "ma57";
 
             obj.solver = nlpsol('solver','ipopt',nlpProb,obj.opts);
         end
 
         function obj = initConstraints(obj)
-            obj.lbx = zeros(obj.NX + (obj.NX + obj.NU)*obj.N,1);
-            obj.ubx = zeros(obj.NX + (obj.NX + obj.NU)*obj.N,1);
+            obj.lbx = zeros(obj.NX * (obj.N+1) + obj.NU * (obj.N) + obj.NS * (obj.N+1) ,1);
+            obj.ubx = zeros(obj.NX * (obj.N+1) + obj.NU * (obj.N) + obj.NS * (obj.N+1) ,1);
+            
             for i = 1:obj.N+1
                 obj.lbx((obj.NX*(i-1) + 1):obj.NX*i,1) = [obj.d_parameters.bounds.lowerStateBounds.xL,...
                                                           obj.d_parameters.bounds.lowerStateBounds.yL,...
@@ -346,12 +366,15 @@ classdef IpoptCasadi
                     obj.d_parameters.bounds.upperInputBounds.dBrakesU,...
                     obj.d_parameters.bounds.upperInputBounds.dVsU]; 
             end
+            for i = 1:obj.N+1
+                obj.lbx((obj.NX*(obj.N+1) + obj.NU*obj.N + obj.NS*(i-1) + 1):(obj.NX*(obj.N+1) + obj.NU*obj.N + obj.NS*i),1) = ...
+                    [obj.d_parameters.bounds.]
+                obj.ubx((obj.NX*(obj.N+1) + obj.NU*obj.N + obj.NS*(i-1) + 1):(obj.NX*(obj.N+1) + obj.NU*obj.N + obj.NS*i),1) = ...
+            end
         end
-        
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+
+        function ipoptReturn = solve(obj, x0)
+            
         end
     end
 end
