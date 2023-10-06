@@ -16,4 +16,3 @@ classdef IpoptReturn
     end
 
 end
-
