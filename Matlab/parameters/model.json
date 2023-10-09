@@ -9,8 +9,6 @@
     
     "maxAlpha": 0.15,
     
-    "initialVelocity": 15.0,
-    "sTrustRegion": 30.0,
-    
-    "vxZero": 0.3
+    "initialVelocity": 3.0,
+    "sTrustRegion": 30.0
 }

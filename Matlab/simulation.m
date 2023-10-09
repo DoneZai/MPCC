@@ -26,6 +26,10 @@ addpath('spline');
 addpath('tracks');
 addpath('types');
 
+addpath('/opt/casadi/');
+
+import casadi.*;
+
 config = config();
 
 % uncomment 33,34,36,37,39,40,42 to use FSG track
@@ -62,8 +66,10 @@ parameters = Parameters(config);
 
 simulator = Simulator(parameters.car,parameters.tire);
 
-mpc = Mpcc(config,parameters);
-mpc.setTrack(track.x,track.y);
+%mpc = Mpcc(config,parameters);
+mpc = IpoptCasadi(config,parameters);
+mpc.setTrack(track);
+mpc.initMPC();
 trackCenter = mpc.getTrack().getPath();
 
 figure(1);
