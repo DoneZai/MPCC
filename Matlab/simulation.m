@@ -26,7 +26,8 @@ addpath('spline');
 addpath('tracks');
 addpath('types');
 
-addpath('/opt/casadi/');
+%addpath('/opt/casadi/');
+addpath('/home/pavel/casadi-3.6.3-linux64-matlab2018b')
 
 import casadi.*;
 
@@ -72,22 +73,22 @@ mpc.setTrack(track);
 mpc.initMPC();
 trackCenter = mpc.getTrack().getPath();
 
-figure(1);
-hold on;
-plot(track.xOuter,track.yOuter,'b');
-plot(track.xInner,track.yInner,'y');
-plot(trackCenter.x,trackCenter.y);
-legend('outer_border','inner_border','center_line');
+%figure(1);
+%hold on;
+%plot(track.xOuter,track.yOuter,'b');
+%plot(track.xInner,track.yInner,'y');
+%plot(trackCenter.x,trackCenter.y);
+%legend('outer_border','inner_border','center_line');
 
 trackLength = mpc.getTrack().getLength();
 
 % phi0 = atan2(track.y(2) - track.y(1),track.x(2) - track.x(1));
-x0 = State(0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0);
+x0 = [0.0;0.0;0.0;0.0;0.0];
 %log(parameters.config.nSim) = MPCReturn();
-for i = 1:parameters.config.nSim
-    mpcSol = mpc.runMPC(copy(x0));
+%for i = 1:parameters.config.nSim
+for i = 1:10
+    mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
-    x0.unwrap(trackLength);
     log(i) = mpcSol;
 end
 

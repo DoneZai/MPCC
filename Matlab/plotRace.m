@@ -4,15 +4,15 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(1);
     hold on;
 
-    plotSize = size(log,2);
-    stateVec = zeros(config.NX,plotSize);
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
+    stateVec = zeros(length(log(1).x0),length(log));
+    
+    for i = 1:length(log)
+        stateVec(:,i) = log(i).x0;
     end
-
+   
     plot(track.xOuter,track.yOuter,'b');
     plot(track.xInner,track.yInner,'y');
-    plot(trackCenter.x,trackCenter.y);
+    plot(trackCenter.x,trackCenter.y,'r');
     plot(stateVec(1,:),stateVec(2,:),'g');
     legend('outer_border','inner_border','center_line','state');
 
@@ -20,11 +20,8 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(2);
     hold on;
 
-    plotSize = size(log,2);
-    stateVec = zeros(config.NX,plotSize);
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
-    end
+    stateVec = log.mpcHorizon;
+    plotSize = length(stateVec);
     
     frontSaVec = zeros(1,plotSize);
     rearSaVec = zeros(1,plotSize);
@@ -43,11 +40,8 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(3);
     hold on;
 
-    plotSize = size(log,2);
-    stateVec = zeros(config.NX,plotSize);
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
-    end
+    stateVec = log.mpcHorizon;
+    plotSize = length(stateVec);
 
     plot(1:plotSize, stateVec(8,:));
     plot(1:plotSize, stateVec(9,:));
@@ -58,11 +52,8 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(4);
     hold on;
 
-    plotSize = size(log,2);
-    stateVec = zeros(config.NX,plotSize);
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
-    end
+    stateVec = log.mpcHorizon;
+    plotSize = length(stateVec);
 
     plot(1:plotSize, stateVec(7,:));
     plot(1:plotSize, stateVec(11,:));
@@ -71,11 +62,7 @@ function plotRace(log,track,trackCenter,parameters,config)
     %% vs(s)
     figure(5)
 
-    plotSize = size(log,2);
-    stateVec = zeros(config.NX,plotSize);
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
-    end
+    stateVec = log.mpcHorizon;
 
     plot(stateVec(7,:),stateVec(11,:));
     legend('vs');
@@ -84,11 +71,8 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(6);
     hold on;
 
-    plotSize = size(log,2);
-    stateVec = zeros(config.NX,plotSize);
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
-    end
+    stateVec = log.mpcHorizon;
+    plotSize = length(stateVec);
     
     plot(track.xOuter,track.yOuter,'b');
     plot(track.xInner,track.yInner,'y');
@@ -109,13 +93,8 @@ function plotRace(log,track,trackCenter,parameters,config)
     %% steeringAngle
     figure(7);
 
-    plotSize = size(log,2);
-
-    steeringAngle = zeros(1,plotSize);
-    
-    for i = 1:plotSize
-        steeringAngle(1,i) = log(i).mpcHorizon(1).xk.steeringAngle;
-    end
+    steeringAngle = log.mpcHorizon(9);
+    plotSize = length(stateVec);
 
     plot(1:plotSize,steeringAngle);
     legend('steeringAngle');
@@ -124,12 +103,9 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(8)
     hold on;
 
-    plotSize = size(log,2);
-    stateVec = zeros(config.NX,plotSize);
-    for i = 1:plotSize
-        stateVec(:,i) = stateToVector(log(i).mpcHorizon(1).xk);
-    end
-        
+    stateVec = log.mpcHorizon;
+    plotSize = length(stateVec);
+  
     plot(1:plotSize,stateVec(4,:));
     plot(1:plotSize,stateVec(5,:));
     plot(1:plotSize,stateVec(6,:));
@@ -139,34 +115,34 @@ function plotRace(log,track,trackCenter,parameters,config)
     legend('vx','vy','r','throttle','steeringAngle','brakes');
 
     %% solver status
-    figure(9);
-    hold on;
-
-    plotSize = size(log,2);
-    solverStatusVec = zeros(1,plotSize);
-
-    for i = 1:plotSize
-        solverStatusVec(i) = log(i).solverStatus;
-    end
-    plot(1:plotSize, solverStatusVec);
-
-    legend('solver status');
+    %figure(9);
+    %hold on;
+%
+    %plotSize = size(log,2);
+    %solverStatusVec = zeros(1,plotSize);
+%
+    %for i = 1:plotSize
+    %    solverStatusVec(i) = log(i).solverStatus;
+    %end
+    %plot(1:plotSize, solverStatusVec);
+%
+    %legend('solver status');
     
     %% Control inputs
-    figure(10);
-    hold on;
-    
-    plotSize = size(log,2);
-    inputVec = zeros(config.NU,plotSize);
-    
-    for i = 1:plotSize
-        inputVec(:,i) = inputToVector(log(i).mpcHorizon(1).uk);
-    end
-
-    plot(1:plotSize,inputVec(1,:));
-    plot(1:plotSize,inputVec(2,:));
-    plot(1:plotSize,inputVec(3,:));
-    plot(1:plotSize,inputVec(4,:));
-
-    legend('dthrottle','dsteeringAngle','dbrakes','dvs');
+    %figure(10);
+    %hold on;
+    %
+    %plotSize = size(log,2);
+    %inputVec = zeros(config.NU,plotSize);
+    %
+    %for i = 1:plotSize
+    %    inputVec(:,i) = inputToVector(log(i).mpcHorizon(1).uk);
+    %end
+%
+    %plot(1:plotSize,inputVec(1,:));
+    %plot(1:plotSize,inputVec(2,:));
+    %plot(1:plotSize,inputVec(3,:));
+    %plot(1:plotSize,inputVec(4,:));
+%
+    %legend('dthrottle','dsteeringAngle','dbrakes','dvs');
 end

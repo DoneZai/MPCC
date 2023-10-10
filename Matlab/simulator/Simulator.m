@@ -21,14 +21,13 @@ classdef Simulator < handle
         function xNext = ode4(obj,state,input,ts)
             % 4th order Runge Kutta (RK4) implementation
             % 4 evaluation points of continuous dynamics
-            xVec = stateToVector(state);
             % evaluating the 4 points
-            k1 = obj.getF(vectorToState(xVec), input);
-            k2 = obj.getF(vectorToState(xVec + ts / 2.0 * k1), input);
-            k3 = obj.getF(vectorToState(xVec + ts / 2.0 * k2), input);
-            k4 = obj.getF(vectorToState(xVec + ts * k3), input);
+            k1 = obj.getF(vectorToState(state), vectorToInput(input));
+            k2 = obj.getF(vectorToState(state + ts / 2.0 * k1), vectorToInput(input));
+            k3 = obj.getF(vectorToState(state + ts / 2.0 * k2), vectorToInput(input));
+            k4 = obj.getF(vectorToState(state + ts * k3), vectorToInput(input));
             % combining to give output
-            xNext = xVec + ts * (k1 / 6.0 + k2 / 3.0 + k3 / 3.0 + k4 / 6.0);
+            xNext = state + ts * (k1 / 6.0 + k2 / 3.0 + k3 / 3.0 + k4 / 6.0);
         end
 
         function fdrag = getFdrag(obj,x)
@@ -77,7 +76,7 @@ classdef Simulator < handle
             integrationSteps = cast(ts/0.001,'int64');
             
             for i = 1:integrationSteps
-                xNext = vectorToState(obj.ode4(xNext,u,0.001));
+                xNext = obj.ode4(xNext,u,0.001);
             end
         end
     end
