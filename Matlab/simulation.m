@@ -27,7 +27,7 @@ addpath('tracks');
 addpath('types');
 
 %addpath('/opt/casadi/');
-addpath('/home/pavel/casadi-3.6.3-linux64-matlab2018b')
+addpath('/opt/casadi/')
 
 import casadi.*;
 
@@ -83,7 +83,9 @@ trackCenter = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
 % phi0 = atan2(track.y(2) - track.y(1),track.x(2) - track.x(1));
-x0 = [0.0;0.0;0.0;0.0;0.0];
+x0 = [0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0];
+
+testModel(mpc);
 %log(parameters.config.nSim) = MPCReturn();
 %for i = 1:parameters.config.nSim
 for i = 1:10

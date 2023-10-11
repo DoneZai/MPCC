@@ -56,13 +56,12 @@ classdef IpoptCasadi < handle
         end
 
         function initMPC(obj)
-            %obj.initSystemModel();
-            obj.initKinematicModel();
-            obj.computeConstraints();
-            obj.computeCost();
+            obj.initSystemModel();
+            obj.initEqualityConstraints();
+            %obj.initInequalityConstraints();
+            obj.initCostFunction();
             obj.initIpoptSolver();
-            obj.computeKinematicModelBounds;
-            %obj.computeBounds();
+            obj.setBounds();
         end
 
         function setTrack(obj,track)
@@ -75,14 +74,6 @@ classdef IpoptCasadi < handle
             centerLine = obj.d_track.centerLine.getPath();
             outerBoredr = obj.d_track.outerBorder.getPath();
             innerBorder = obj.d_track.innerBorder.getPath();
-
-            %figure(1);
-            %hold on;
-            %plot(centerLine.x,centerLine.y,'r');
-            %plot(outerBoredr.x,outerBoredr.y,'b');
-            %plot(innerBorder.x,innerBorder.y,'y');
-            %legend('center_line','outer_border','inner_border');
-
 
             centerLineDerivatives = zeros(2,length(centerLine.s));
             
@@ -106,31 +97,84 @@ classdef IpoptCasadi < handle
             track = obj.d_track.centerLine;
         end
 
-        function initSystemModel(obj)
-            % States
-            import casadi.*;
+        function rhs = initKinematicModel(obj, states, controls)
+            yaw = states(3);
+            vx = states(4);
+            vy = states(5);
+            r = states(6);
+            throttle = states(8);
+            steeringAngle = states(9);
+            brakes = states(10);
+            vs = states(11);
 
-            x = MX.sym('x');
-            y = MX.sym('y');
-            yaw = MX.sym('yaw');
-            vx = MX.sym('vx');
-            vy = MX.sym('vy');
-            r = MX.sym('r');
-            s = MX.sym('s');
-            throttle = MX.sym('throttle');
-            steeringAngle = MX.sym('steeringAngle');
-            brakes = MX.sym('brakes');
-            vs = MX.sym('vs');
+            dThrottle = controls(1);
+            dSteeringAngle = controls(2);
+            dBrakes = controls(3);
+            dVs = controls(4);
             
-            states = [x;y;yaw;vx;vy;r;s;throttle;steeringAngle;brakes;vs];
+            % car parameters
+            rDyn = obj.d_car.rDyn;
             
-            % Controls
-            dThrottle = MX.sym('dThrottle');
-            dSteeringAngle = MX.sym('dSteeringAngle');
-            dBrakes = MX.sym('dBrakes');
-            dVs = MX.sym('dVs');
+            cdrv = obj.d_car.cm1*obj.d_car.gearRatio;
+            cbf = obj.d_car.cbf;
+            cbr = obj.d_car.cbr;
 
-            controls = [dThrottle,dSteeringAngle,dBrakes,dVs];
+            m = obj.d_car.m;
+            lf = obj.d_car.lf;
+            lr = obj.d_car.lr;
+            gAcc = obj.d_car.g;
+
+            % normal load on the one front wheel
+            Ffz = lr*m*gAcc/(2.0*(lf+lr));
+
+            % normal load on the one rear wheel
+            Frz = lf*m*gAcc/(2.0*(lf+lr));
+            
+            % rolling resistance of the two front wheels
+            Ffrr = 2*obj.d_tire.QSY1*Ffz;
+
+            % rolling resistance of the two rear wheels
+            Frrr = 2*obj.d_tire.QSY1*Frz;
+
+            % longitudinal front force
+            Ffx = (-cbf*brakes)/rDyn + Ffrr;
+            
+            % longitudinal rear force
+            Frx = (-cbr*brakes+cdrv*throttle)/rDyn + Frrr;
+
+            % drag force
+            Fdrag = obj.d_car.cd*vx^2.0;
+
+            % dot vx
+            vxDot = 1/m*(Frx + cos(steeringAngle)*Ffx+Fdrag);
+
+            rhs = [vx*cos(yaw)-vy*sin(yaw);
+                   vx*sin(yaw)+vy*cos(yaw);
+                   r;
+                   vxDot;
+                   lr/(lr+lf)*(dSteeringAngle*vx+steeringAngle*vxDot);
+                   1/(lr+lf)*(dSteeringAngle*vx+steeringAngle*vxDot);
+                   vs;
+                   dThrottle;
+                   dSteeringAngle;
+                   dBrakes;
+                   dVs];
+        end
+
+        function rhs = initDynamicModel(obj, states, controls)
+            yaw = states(3);
+            vx = states(4);
+            vy = states(5);
+            r = states(6);
+            throttle = states(8);
+            steeringAngle = states(9);
+            brakes = states(10);
+            vs = states(11);
+
+            dThrottle = controls(1);
+            dSteeringAngle = controls(2);
+            dBrakes = controls(3);
+            dVs = controls(4);
 
             %Dynamic forces
             rDyn = obj.d_car.rDyn;
@@ -140,6 +184,7 @@ classdef IpoptCasadi < handle
             cbr = obj.d_car.cbr;
 
             m = obj.d_car.m;
+            iz = obj.d_car.iz;
             lf = obj.d_car.lf;
             lr = obj.d_car.lr;
             gAcc = obj.d_car.g;
@@ -214,59 +259,52 @@ classdef IpoptCasadi < handle
             rhs = [vx * cos(yaw) - vy * sin(yaw);
                    vx * sin(yaw) + vy * cos(yaw);
                    r;
-                   1 / obj.d_car.m *...
+                   1 / m *...
                    (Frx + cos(steeringAngle) * Ffx + Fdrag - sin(steeringAngle) * Ffy +...
-                    obj.d_car.m * vy * r);
-                   1 / obj.d_car.m *...
-                   (Fry + cos(steeringAngle) * Ffy + sin(steeringAngle) * Ffx - obj.d_car.m * vx * r);
-                   1 / obj.d_car.iz *...
-                   (-Fry * obj.d_car.lr + (cos(steeringAngle) * Ffy + sin(steeringAngle) * Ffx) * obj.d_car.lf);
+                   m * vy * r);
+                   1 / m *...
+                   (Fry + cos(steeringAngle) * Ffy + sin(steeringAngle) * Ffx - m * vx * r);
+                   1 / iz *...
+                   (-Fry * lr + (cos(steeringAngle) * Ffy + sin(steeringAngle) * Ffx) * lf);
                    vs;
                    dThrottle;
                    dSteeringAngle;
                    dBrakes;
                    dVs];
+        end
+
+        function initSystemModel(obj)
+            % States
+            import casadi.*;
+
+            x = MX.sym('x');
+            y = MX.sym('y');
+            yaw = MX.sym('yaw');
+            vx = MX.sym('vx');
+            vy = MX.sym('vy');
+            r = MX.sym('r');
+            s = MX.sym('s');
+            throttle = MX.sym('throttle');
+            steeringAngle = MX.sym('steeringAngle');
+            brakes = MX.sym('brakes');
+            vs = MX.sym('vs');
+            
+            states = [x;y;yaw;vx;vy;r;s;throttle;steeringAngle;brakes;vs];
+            
+            % Controls
+            dThrottle = MX.sym('dThrottle');
+            dSteeringAngle = MX.sym('dSteeringAngle');
+            dBrakes = MX.sym('dBrakes');
+            dVs = MX.sym('dVs');
+
+            controls = [dThrottle,dSteeringAngle,dBrakes,dVs];
+
+            rhs = obj.initKinematicModel(states,controls);
 
             obj.f = Function('f',{states,controls},{rhs});
             
-            % rk4 integration
-
-            %state = zeros(11,1);
-            %state(4) = 5.0;
-            %state(8) = 0.0;
-            %state(9) = -0.33;
-            %state(10) = 0.1;
-            %control = zeros(4,1);
-            
-            %control(1) = 1.0;
-            %stateNextRK4 = DM(obj.d_config.NX,200);
-
-            %k1 = obj.f(state,control);
-            %k2 = obj.f(state + obj.d_ts/2 * k1,control);
-            %k3 = obj.f(state + obj.d_ts/2 * k2,control);
-            %k4 = obj.f(state + obj.d_ts * k3,control);
-            %stateNextRK4(:,1) = state + obj.d_ts/6 * (k1 + 2*k2 + 2*k3 + k4);
-            
-            %for k = 2:200
-            %    k1 = obj.f(stateNextRK4(:,k-1),control);
-            %    k2 = obj.f(stateNextRK4(:,k-1) + obj.d_ts/2 * k1,control);
-            %    k3 = obj.f(stateNextRK4(:,k-1) + obj.d_ts/2 * k2,control);
-            %    k4 = obj.f(stateNextRK4(:,k-1) + obj.d_ts * k3,control);
-            %    stateNextRK4(:,k) = stateNextRK4(:,k-1) + obj.d_ts/6 * (k1 + 2*k2 + 2*k3 + k4);
-            %end
-            
-            %stateRK4full = stateNextRK4.full();
-            %figure(1);
-            %plot(1:200,stateRK4full(4,:));
-            %figure(2);
-            %plot(stateRK4full(1,:),stateRK4full(2,:));
-            %figure(3);
-            %plot(1:200,stateRK4full(5,:));
-            
-
             obj.U = MX.sym('U',obj.d_config.NU,obj.d_config.N);
-            %obj.P = MX.sym('P',obj.d_config.NX,1); % NX - initial state
-            obj.P = MX.sym('P',obj.d_config.NX + 2,1); % NX - initial state, 2 - reference point
+            obj.P = MX.sym('P',obj.d_config.NX,1); % NX - initial state
             obj.X = MX.sym('X',obj.d_config.NX,(obj.d_config.N+1));
             % slack variables matrix for soft constraints
             %obj.S = MX.sym('S',obj.d_config.NS,(obj.d_config.N+1));
@@ -296,59 +334,7 @@ classdef IpoptCasadi < handle
             %obj.Z(3,3) = obj.d_parameters.costs.scQuadTrack;
         end
 
-        function initKinematicModel(obj)
-            % States
-            import casadi.*;
-
-            x = MX.sym('x');
-            y = MX.sym('y');
-            yaw = MX.sym('yaw');
-            v = MX.sym('v');
-            s = MX.sym('s');
-            
-            states = [x;y;yaw;v;s];
-            
-            % Controls
-            throttle = MX.sym('throttle');
-            steeringAngle = MX.sym('steeringAngle');
-            brakes = MX.sym('brakes');
-            vs = MX.sym('vs');
-
-            controls = [throttle,steeringAngle,brakes,vs];
-
-            lf = obj.d_car.lf;
-            lr = obj.d_car.lr;
-
-            rhs = [v * cos(yaw);
-                   v * sin(yaw);
-                   v*tan(steeringAngle) / (lr+lf);
-                   throttle-brakes;
-                   vs];
-
-            obj.f = Function('f',{states,controls},{rhs});
-            obj.U = MX.sym('U',obj.d_config.NU,obj.d_config.N);
-            obj.P = MX.sym('P',obj.d_config.NX + 2,1); % NX - initial state, 2 - reference point
-            obj.X = MX.sym('X',obj.d_config.NX,(obj.d_config.N+1));
-
-            % objective function
-            obj.objective = 0;
-
-            % constraints
-            obj.g = [];
-            
-            % Coeffs for laf and contouring errors penallization
-            obj.Q = zeros(2,2);
-            obj.Q(1,1) = obj.d_parameters.costs.qC;
-            obj.Q(2,2) = obj.d_parameters.costs.qL;
-            
-            % Coeffs for control inputs penalization
-            obj.R = zeros(3,3);
-            obj.R(1,1) = obj.d_parameters.costs.rThrottle;
-            obj.R(2,2) = obj.d_parameters.costs.rSteeringAngle;
-            obj.R(3,3) = obj.d_parameters.costs.rThrottle;
-        end
-
-        function computeConstraints(obj)
+        function initEqualityConstraints(obj)
             x0 = obj.X(:,1);
             obj.g = [obj.g;x0-obj.P(1:obj.d_config.NX)];
             for i = 1:obj.d_config.N
@@ -362,38 +348,44 @@ classdef IpoptCasadi < handle
                 % base constraint
                 obj.g = [obj.g;stateNext-stateNextRK4];
             end
-
-            %Track constraint and slip angles constraints
-
-            %for i = 1:obj.d_config.N+1
-%
-            %state = obj.X(:,i);
-%
-            %x = state(1);
-            %y = state(2);
-            %vx = state(4);
-            %vy = state(5);
-            %r = state(6);
-            %s = state(7);
-            %steeringAngle = state(9);
-%
-            %lf = obj.d_car.lf;
-            %lr = obj.d_car.lr;
-%
-            %    % front slip angle constraint with slack variable
-            %safg = atan2((vy + r*lf),vx) - steeringAngle + obj.S(1,i);
-            %obj.g = [obj.g;safg];  
-%
-            %    % rear slip angle constraint with slack variable
-            %sarg = atan2((vy - r*lr),vx) + obj.S(2,i);
-            %obj.g = [obj.g;sarg];  
-%
-            %    % track constraint: 0.0 <= (X - Xcen(S))^2 + (Y - Ycen(S))^2 <= rOut
-            %    obj.g = [obj.g;(x-obj.d_track.centerLineInterpolation.x(s))^2 + (y-obj.d_track.centerLineInterpolation.y(s))^2 + obj.S(3,i)];
-            %end 
         end
 
-        function computeCost(obj)
+        function initInequalityConstraints(obj)
+            for i = 1:obj.d_config.N+1
+
+                state = obj.X(:,i);
+    
+                x = state(1);
+                y = state(2);
+                vx = state(4);
+                vy = state(5);
+                r = state(6);
+                s = state(7);
+                steeringAngle = state(9);
+    
+                lf = obj.d_car.lf;
+                lr = obj.d_car.lr;
+    
+                % front slip angle constraint with slack variable
+                safg = atan2((vy + r*lf),vx) - steeringAngle + obj.S(1,i);
+                obj.g = [obj.g;safg];  
+    
+                % rear slip angle constraint with slack variable
+                sarg = atan2((vy - r*lr),vx) + obj.S(2,i);
+                obj.g = [obj.g;sarg];  
+    
+                % track constraint: 0.0 <= (X - Xcen(S))^2 + (Y - Ycen(S))^2 <= rOut
+                obj.g = [obj.g;(x-obj.d_track.centerLineInterpolation.x(s))^2 + (y-obj.d_track.centerLineInterpolation.y(s))^2 + obj.S(3,i)];
+
+                % soft constraints slack variables matrix
+                slacks = obj.S(:,i);
+                
+                % objective function with slack vars
+                obj.objective = obj.objective + slacks' *obj.Z * slacks;
+            end 
+        end
+
+        function initCostFunction(obj)
             for i = 1:obj.d_config.N
                 stateNext = obj.X(:,i+1);
                 control = obj.U(:,i);
@@ -415,9 +407,6 @@ classdef IpoptCasadi < handle
                 %                    + sin(thetaRef) * (yRef - y);
                 %error = [ec;el];
 
-                % soft constraints slack variables matrix
-                %slacks = obj.S(:,i);
-
                 xError = 10 - x;
                 yError = 10 - y;
 
@@ -425,7 +414,7 @@ classdef IpoptCasadi < handle
                 
                 % objective function
                 %obj.objective = obj.objective + error' * obj.Q * error + ...
-                %    control' * obj.R * control - obj.d_parameters.costs.qVs * vs;% + slacks' *obj.Z * slacks;
+                %    control' * obj.R * control - obj.d_parameters.costs.qVs * vs;
 
                 obj.objective = obj.objective + error' * obj.Q * error;
             end 
@@ -448,107 +437,13 @@ classdef IpoptCasadi < handle
             obj.solver = nlpsol('solver','ipopt',nlpProb,obj.opts);
         end
 
-        function computeKinematicModelBounds(obj)
-            %obj.args.lbx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N) + obj.d_config.NS * (obj.d_config.N+1),1); % lower bounds for states, inputs and slack vars
-            %obj.args.ubx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N) + obj.d_config.NS * (obj.d_config.N+1),1); % upper bounds for states, inputs and slack vars
+        function setBounds(obj)
+            obj.args.lbx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N) + obj.d_config.NS*(obj.d_config.N+1),1); % lower bounds for states, inputs and slack vars
+            obj.args.ubx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N) + obj.d_config.NS*(obj.d_config.N+1),1); % upper bounds for states, inputs and slack vars
 
-            obj.args.lbx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N),1); % lower bounds for states, inputs and slack vars
-            obj.args.ubx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N),1); % upper bounds for states, inputs and slack vars
+            obj.args.lbg = zeros(obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1),1); % lower bounds for equality and inequality constraints
+            obj.args.ubg = zeros(obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1),1); % upper bounds for equality and inequality constraints
 
-            %obj.args.lbg = zeros(obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1),1); % lower bounds for equality and inequality constraints
-            %obj.args.ubg = zeros(obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1),1); % upper bounds for equality and inequality constraints
-
-            obj.args.lbg = zeros(1,obj.d_config.NX*(obj.d_config.N+1)); % lower bounds for equality constraints
-            obj.args.ubg = zeros(1,obj.d_config.NX*(obj.d_config.N+1)); % upper bounds for equality constraints
-            
-            % lower and upper bounds vals for states, inputs and slack variables
-            % lower and upper bounds for states
-          
-            obj.args.lbx(1:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.lowerStateBounds.xL;
-            obj.args.lbx(2:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.lowerStateBounds.yL;
-            obj.args.lbx(3:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.lowerStateBounds.phiL;
-            obj.args.lbx(4:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = 0;
-            obj.args.lbx(5:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.lowerStateBounds.sL;
-
-            obj.args.ubx(1:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.upperStateBounds.xU;
-            obj.args.ubx(2:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.upperStateBounds.yU;
-            obj.args.ubx(3:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.upperStateBounds.phiU;
-            obj.args.ubx(4:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.upperStateBounds.vxU;
-            obj.args.ubx(5:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.upperStateBounds.sU;
-            
-            % lower and upper bounds for inputs
-            
-            obj.args.lbx(obj.d_config.NX*(obj.d_config.N+1)+1: ...
-                                          obj.d_config.NU: ...
-                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = 0;
-
-            obj.args.lbx(obj.d_config.NX*(obj.d_config.N+1)+2: ...
-                                          obj.d_config.NU: ...
-                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = obj.d_parameters.bounds.lowerStateBounds.steeringAngleL;
-
-            obj.args.lbx(obj.d_config.NX*(obj.d_config.N+1)+3: ...
-                                          obj.d_config.NU: ...
-                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = 0;
-
-            obj.args.lbx(obj.d_config.NX*(obj.d_config.N+1)+4: ...
-                                          obj.d_config.NU: ...
-                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = 0;
-
-
-            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+1: ...
-                                          obj.d_config.NU: ...
-                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = 1;
-
-            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+2: ...
-                                          obj.d_config.NU: ...
-                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = obj.d_parameters.bounds.upperStateBounds.steeringAngleU;
-
-            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+3: ...
-                                          obj.d_config.NU: ...
-                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = 1;
-
-            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+4: ...
-                                          obj.d_config.NU: ...
-                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = obj.d_parameters.bounds.upperStateBounds.vsU;
-
-            % lower and upper bounds for slack variables
-            %for i = 1:obj.d_config.N+1
-            %    obj.args.lbx((obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NU*obj.d_config.N + obj.d_config.NS*(i-1) + 1): ...
-            %            (obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NU*obj.d_config.N + obj.d_config.NS*i),1) = [-inf,-inf];
-            %    obj.args.ubx((obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NU*obj.d_config.N + obj.d_config.NS*(i-1) + 1): ...
-            %            (obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NU*obj.d_config.N + obj.d_config.NS*i),1) = [inf,inf];
-            %end
-
-            % lower and upper bounds for equality and inequality constraints
-            % lower and upper bounds for the equality constraints
-            obj.args.lbg(1:obj.d_config.NX*(obj.d_config.N+1)) = 0;
-            obj.args.ubg(1:obj.d_config.NX*(obj.d_config.N+1)) = 0;
-
-            % lower and upper bounds for the inequality constraints
-            % lower and upper bounds for the front slip angle
-            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
-            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
-            % lower and upper bounds for the rear slip angle
-            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
-            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
-            % lower and upper bounds for the track constraint
-            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0.0;
-            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.rOut;
-        end
-
-        function computeBounds(obj)
-            %obj.args.lbx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N) + obj.d_config.NS * (obj.d_config.N+1),1); % lower bounds for states, inputs and slack vars
-            %obj.args.ubx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N) + obj.d_config.NS * (obj.d_config.N+1),1); % upper bounds for states, inputs and slack vars
-
-            obj.args.lbx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N),1); % lower bounds for states, inputs and slack vars
-            obj.args.ubx = zeros(obj.d_config.NX * (obj.d_config.N+1) + obj.d_config.NU * (obj.d_config.N),1); % upper bounds for states, inputs and slack vars
-
-            %obj.args.lbg = zeros(obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1),1); % lower bounds for equality and inequality constraints
-            %obj.args.ubg = zeros(obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1),1); % upper bounds for equality and inequality constraints
-
-            obj.args.lbg = zeros(1,obj.d_config.NX*(obj.d_config.N+1)); % lower bounds for equality constraints
-            obj.args.ubg = zeros(1,obj.d_config.NX*(obj.d_config.N+1)); % upper bounds for equality constraints
-            
             % lower and upper bounds vals for states, inputs and slack variables
             % lower and upper bounds for states
           
@@ -611,30 +506,21 @@ classdef IpoptCasadi < handle
             obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+4: ...
                                           obj.d_config.NU: ...
                                           obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = obj.d_parameters.bounds.upperInputBounds.dVsU;
-
-            % lower and upper bounds for slack variables
-            %for i = 1:obj.d_config.N+1
-            %    obj.args.lbx((obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NU*obj.d_config.N + obj.d_config.NS*(i-1) + 1): ...
-            %            (obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NU*obj.d_config.N + obj.d_config.NS*i),1) = [-inf,-inf];
-            %    obj.args.ubx((obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NU*obj.d_config.N + obj.d_config.NS*(i-1) + 1): ...
-            %            (obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NU*obj.d_config.N + obj.d_config.NS*i),1) = [inf,inf];
-            %end
-
+           
             % lower and upper bounds for equality and inequality constraints
             % lower and upper bounds for the equality constraints
             obj.args.lbg(1:obj.d_config.NX*(obj.d_config.N+1)) = 0;
             obj.args.ubg(1:obj.d_config.NX*(obj.d_config.N+1)) = 0;
-
             % lower and upper bounds for the inequality constraints
             % lower and upper bounds for the front slip angle
-            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
-            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
+            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
+            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
             % lower and upper bounds for the rear slip angle
-            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
-            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
+            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
+            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
             % lower and upper bounds for the track constraint
-            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0.0;
-            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.rOut;
+            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0.0;
+            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.rOut;
         end
 
         function ipoptReturn = runMPC(obj, x0)
@@ -649,7 +535,6 @@ classdef IpoptCasadi < handle
             end
 
             obj.args.p(1:obj.d_config.NX,1) = x0;
-            obj.args.p(obj.d_config.NX+1:obj.d_config.NX+2) = [10;10];
           
             obj.args.x0 = [reshape(obj.d_initialStateGuess,obj.d_config.NX*(obj.d_config.N+1),1);
                            reshape(obj.d_initialControlGuess,obj.d_config.NU*(obj.d_config.N),1)];
