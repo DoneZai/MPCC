@@ -300,6 +300,7 @@ classdef IpoptCasadi < handle
             controls = [dThrottle,dSteeringAngle,dBrakes,dVs];
 
             rhs = obj.initKinematicModel(states,controls);
+            % rhs = obj.initDynamicModel(states,controls);
 
             obj.f = Function('f',{states,controls},{rhs});
             
@@ -431,6 +432,8 @@ classdef IpoptCasadi < handle
             obj.opts.ipopt.max_iter = 2000;
             obj.opts.ipopt.print_level = 3;%0,3
             obj.opts.print_time = 0;
+            %obj.opts.compiler = 'shell';
+            %obj.opts.jit = true;
             obj.opts.ipopt.acceptable_tol =1e-8;
             obj.opts.ipopt.acceptable_obj_change_tol = 1e-6;
             

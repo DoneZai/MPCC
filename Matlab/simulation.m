@@ -85,7 +85,7 @@ trackLength = mpc.getTrack().getLength();
 % phi0 = atan2(track.y(2) - track.y(1),track.x(2) - track.x(1));
 x0 = [0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0];
 
-testModel(mpc);
+%testModel(mpc);
 %log(parameters.config.nSim) = MPCReturn();
 %for i = 1:parameters.config.nSim
 for i = 1:10
