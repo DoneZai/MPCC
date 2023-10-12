@@ -393,31 +393,24 @@ classdef IpoptCasadi < handle
                 
                 x = stateNext(1);
                 y = stateNext(2);
-                %s = stateNext(7);
-                %vs = stateNext(11);
+                s = stateNext(7);
+                vs = stateNext(11);
                 
-                %xRef = obj.d_track.centerLineInterpolation.x(s);
-                %yRef = obj.d_track.centerLineInterpolation.y(s);
-                %thetaRef = atan2(obj.d_track.centerLineDerivativesInterpolation.y(s),obj.d_track.centerLineDerivativesInterpolation.x(s));
+                xRef = obj.d_track.centerLineInterpolation.x(s);
+                yRef = obj.d_track.centerLineInterpolation.y(s);
+                thetaRef = atan2(obj.d_track.centerLineDerivativesInterpolation.y(s),obj.d_track.centerLineDerivativesInterpolation.x(s));
                 
                 % contouring error
-                %ec = -sin(thetaRef) * (xRef - x)...
-                %                    + cos(thetaRef) * (yRef - y);
+                ec = -sin(thetaRef) * (xRef - x)...
+                                    + cos(thetaRef) * (yRef - y);
                 % lag error
-                %el = cos(thetaRef) * (xRef - x)...
-                %                    + sin(thetaRef) * (yRef - y);
-                %error = [ec;el];
-
-                xError = 10 - x;
-                yError = 10 - y;
-
-                error = [xError;yError];
+                el = cos(thetaRef) * (xRef - x)...
+                                    + sin(thetaRef) * (yRef - y);
+                error = [ec;el];
                 
                 % objective function
-                %obj.objective = obj.objective + error' * obj.Q * error + ...
-                %    control' * obj.R * control - obj.d_parameters.costs.qVs * vs;
-
-                obj.objective = obj.objective + error' * obj.Q * error;
+                obj.objective = obj.objective + error' * obj.Q * error + ...
+                    control' * obj.R * control - obj.d_parameters.costs.qVs * vs;
             end 
         end
 
@@ -432,8 +425,8 @@ classdef IpoptCasadi < handle
             obj.opts.ipopt.max_iter = 2000;
             obj.opts.ipopt.print_level = 3;%0,3
             obj.opts.print_time = 0;
-            %obj.opts.compiler = 'shell';
-            %obj.opts.jit = true;
+            obj.opts.compiler = 'shell';
+            obj.opts.jit = true;
             obj.opts.ipopt.acceptable_tol =1e-8;
             obj.opts.ipopt.acceptable_obj_change_tol = 1e-6;
             
@@ -529,7 +522,7 @@ classdef IpoptCasadi < handle
         function ipoptReturn = runMPC(obj, x0)
             %s0 = zeros(obj.d_config.NS,obj.d_config.N+1);
             x0 = obj.unwrapState(x0);
-            %x0(obj.d_config.siIndex.s) = obj.d_track.centerLine.projectOnSpline(vectorToState(x0));
+            x0(obj.d_config.siIndex.s) = obj.d_track.centerLine.projectOnSpline(vectorToState(x0));
             
             if obj.d_validInitialGuess
               obj.updateInitialGuess2(x0);
@@ -580,9 +573,10 @@ classdef IpoptCasadi < handle
                 obj.d_initialControlGuess(:,i-1) = obj.d_initialControlGuess(:,i);
             end
             obj.d_initialStateGuess(:,1) = x0;
-            obj.d_initialStateGuess(:,N) = obj.d_initialStateGuess(:,N+1);
-            obj.d_initialControlGuess(:,N) = zeros(obj.d_config.NU,1);
-            obj.d_initialStateGuess(:,N+1) = obj.d_initialStateGuess(:,N);
+            obj.d_initialStateGuess(:,obj.d_config.N) = obj.d_initialStateGuess(:,obj.d_config.N+1);
+            obj.d_initialControlGuess(:,obj.d_config.N) = zeros(obj.d_config.NU,1);
+            obj.d_initialStateGuess(:,obj.d_config.N+1) = obj.d_initialStateGuess(:,obj.d_config.N);
+            obj.unwrapInitialGuess();
         end
 
         function updateInitialGuess(obj,x0)
@@ -603,6 +597,8 @@ classdef IpoptCasadi < handle
             obj.d_initialStateGuess = zeros(obj.d_config.NX,obj.d_config.N+1);
             obj.d_initialStateGuess(:,1) = x0;
             obj.d_initialControlGuess = zeros(obj.d_config.NU,obj.d_config.N);
+            obj.unwrapInitialGuess();
+            obj.d_validInitialGuess = true;
         end
 
         function generateNewInitialGuess(obj,x0)

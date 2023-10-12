@@ -6,7 +6,7 @@ function config = config()
     config.NPC = 2;  % number of polytopic constraints
     config.NS = 0; % number of soft constraints (two slip angles and track)
 
-    config.N = 100;
+    config.N = 99;
     config.NSpline = 5000;
 
     config.siIndex = struct('x',1, ...

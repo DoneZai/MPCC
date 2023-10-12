@@ -83,12 +83,12 @@ trackCenter = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
 % phi0 = atan2(track.y(2) - track.y(1),track.x(2) - track.x(1));
-x0 = [0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0];
+x0 = [10.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0];
 
 %testModel(mpc);
 %log(parameters.config.nSim) = MPCReturn();
 %for i = 1:parameters.config.nSim
-for i = 1:10
+for i = 1:100
     mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
     log(i) = mpcSol;
