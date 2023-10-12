@@ -1,14 +1,14 @@
 function plotRace(log,track,trackCenter,parameters,config)
+
+    stateVec = zeros(length(log(1).x0),length(log));
+    for i = 1:length(log)
+        stateVec(:,i) = log(i).x0;
+    end
+    plotSize = length(log);
     
     %% race track and car state in X,Y coords
     figure(1);
     hold on;
-
-    stateVec = zeros(length(log(1).x0),length(log));
-    
-    for i = 1:length(log)
-        stateVec(:,i) = log(i).x0;
-    end
    
     plot(track.xOuter,track.yOuter,'b');
     plot(track.xInner,track.yInner,'y');
@@ -19,9 +19,6 @@ function plotRace(log,track,trackCenter,parameters,config)
     %% frontSa, rearSa and steeringAngle
     figure(2);
     hold on;
-
-    stateVec = log.mpcHorizon;
-    plotSize = length(stateVec);
     
     frontSaVec = zeros(1,plotSize);
     rearSaVec = zeros(1,plotSize);
@@ -40,9 +37,6 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(3);
     hold on;
 
-    stateVec = log.mpcHorizon;
-    plotSize = length(stateVec);
-
     plot(1:plotSize, stateVec(8,:));
     plot(1:plotSize, stateVec(9,:));
     plot(1:plotSize, stateVec(10,:));
@@ -52,9 +46,6 @@ function plotRace(log,track,trackCenter,parameters,config)
     figure(4);
     hold on;
 
-    stateVec = log.mpcHorizon;
-    plotSize = length(stateVec);
-
     plot(1:plotSize, stateVec(7,:));
     plot(1:plotSize, stateVec(11,:));
     legend('s','vs');
@@ -62,49 +53,32 @@ function plotRace(log,track,trackCenter,parameters,config)
     %% vs(s)
     figure(5)
 
-    stateVec = log.mpcHorizon;
-
     plot(stateVec(7,:),stateVec(11,:));
     legend('vs');
 
-    %% horizon
+    %% horizons
     figure(6);
     hold on;
 
-    stateVec = log.mpcHorizon;
-    plotSize = length(stateVec);
-    
     plot(track.xOuter,track.yOuter,'b');
     plot(track.xInner,track.yInner,'y');
-    plot(trackCenter.x,trackCenter.y);
+    plot(trackCenter.x,trackCenter.y, 'r');
 
-    plot(stateVec(1,:),stateVec(2,:),'g','LineWidth',1);
-
-    for i = 1:plotSize
-        horizonX = zeros(1,config.N);
-        horizonY = zeros(1,config.N);
-        for j = 1:config.N
-            horizonX(j) = log(i).mpcHorizon(j).xk.x;
-            horizonY(j) = log(i).mpcHorizon(j).xk.y;
-        end
+    for i = 1:length(log)
+        horizonX = log(i).mpcHorizon(1,:);
+        horizonY = log(i).mpcHorizon(2,:);
         plot(horizonX,horizonY);
     end
 
     %% steeringAngle
     figure(7);
 
-    steeringAngle = log.mpcHorizon(9);
-    plotSize = length(stateVec);
-
-    plot(1:plotSize,steeringAngle);
+    plot(1:plotSize,stateVec(9,:));
     legend('steeringAngle');
 
     %% vx vy r throttle steeringAngle brakes
     figure(8)
     hold on;
-
-    stateVec = log.mpcHorizon;
-    plotSize = length(stateVec);
   
     plot(1:plotSize,stateVec(4,:));
     plot(1:plotSize,stateVec(5,:));

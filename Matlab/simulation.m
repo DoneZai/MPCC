@@ -65,7 +65,8 @@ track = Track(cones_blue, cones_yellow);
 
 parameters = Parameters(config);
 
-simulator = Simulator(parameters.car,parameters.tire);
+%simulator = DynamicSimulator(parameters.car,parameters.tire);
+simulator = KinematicSimulator(parameters.car,parameters.tire);
 
 %mpc = Mpcc(config,parameters);
 mpc = IpoptCasadi(config,parameters);
@@ -88,7 +89,7 @@ x0 = [10.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0];
 %testModel(mpc);
 %log(parameters.config.nSim) = MPCReturn();
 %for i = 1:parameters.config.nSim
-for i = 1:100
+for i = 1:200
     mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
     log(i) = mpcSol;
