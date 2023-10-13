@@ -2,8 +2,8 @@
     "carL": 2.0,
     "carW": 1.0,
     
-    "rIn": 2.0,
-    "rOut": 2.0,
+    "rIn": 1.0,
+    "rOut": 1.0,
     
     "maxDistProj": 3.0,
     

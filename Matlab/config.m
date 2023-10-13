@@ -4,7 +4,7 @@ function config = config()
     
     config.NB = 11;  % max number of bounds
     config.NPC = 2;  % number of polytopic constraints
-    config.NS = 0; % number of soft constraints (two slip angles and track)
+    config.NS = 1; % number of soft constraints (two slip angles and track)
 
     config.N = 99;
     config.NSpline = 5000;

@@ -84,7 +84,7 @@ trackCenter = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
 % phi0 = atan2(track.y(2) - track.y(1),track.x(2) - track.x(1));
-x0 = [10.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0];
+x0 = [0.0;0.0;0.0;5.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0];
 
 %testModel(mpc);
 %log(parameters.config.nSim) = MPCReturn();
