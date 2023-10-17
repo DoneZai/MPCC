@@ -7,8 +7,8 @@
     
     "maxDistProj": 3.0,
     
-    "maxAlpha": 0.15,
+    "maxAlpha": 0.10,
     
-    "initialVelocity": 3.0,
+    "initialVelocity": 5.0,
     "sTrustRegion": 30.0
 }

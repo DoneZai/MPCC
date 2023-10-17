@@ -58,8 +58,9 @@ classdef IpoptCasadi < handle
         function initMPC(obj)
             obj.initSystemModel();
             obj.initEqualityConstraints();
-            obj.initTrackConstraint();
-            % obj.initTiresConstraints();
+            obj.initLinearTrackConstraint();
+            %obj.initTrackConstraint();
+            %obj.initTiresConstraints();
             obj.initCostFunction();
             obj.initIpoptSolver();
             obj.setBounds();
@@ -274,6 +275,36 @@ classdef IpoptCasadi < handle
                    dVs];
         end
 
+        function rhs = initCombinedModel(obj,state,input)
+            dynamicRhs = obj.initDynamicModel(state,input);
+            kinematicRhs = obj.initKinematicModel(state,input);
+
+            yaw = state(3);
+            vx = state(4);
+            vy = state(5);
+            r = state(6);
+            vs = state(11);
+
+            dThrottle = input(1);
+            dSteeringAngle = input(2);
+            dBrakes = input(3);
+            dVs = input(4);
+
+            lambda = min(max((vx-5)/7,0),1);
+
+            rhs = [vx*cos(yaw)-vy*sin(yaw);
+                   vx*sin(yaw)+vy*cos(yaw);
+                   r;
+                   lambda*dynamicRhs(4)+(1-lambda)*kinematicRhs(4);
+                   lambda*dynamicRhs(5)+(1-lambda)*kinematicRhs(5);
+                   lambda*dynamicRhs(6)+(1-lambda)*kinematicRhs(6);
+                   vs;
+                   dThrottle;
+                   dSteeringAngle;
+                   dBrakes;
+                   dVs];
+        end
+
         function initSystemModel(obj)
             % States
             import casadi.*;
@@ -300,8 +331,8 @@ classdef IpoptCasadi < handle
 
             controls = [dThrottle,dSteeringAngle,dBrakes,dVs];
 
-            % rhs = obj.initKinematicModel(states,controls);
-            rhs = obj.initDynamicModel(states,controls);
+            rhs = obj.initKinematicModel(states,controls);
+            % rhs = obj.initDynamicModel(states,controls);
 
             obj.f = Function('f',{states,controls},{rhs});
             
@@ -332,8 +363,8 @@ classdef IpoptCasadi < handle
             % Coeffs for soft constraints penalization
             obj.Z = zeros(obj.d_config.NS,obj.d_config.NS);
             obj.Z(1,1) = obj.d_parameters.costs.scQuadTrack;
-            %obj.Z(2,2) = obj.d_parameters.costs.scQuadAlpha;
-            %obj.Z(3,3) = obj.d_parameters.costs.scQuadAlpha;
+            obj.Z(2,2) = obj.d_parameters.costs.scQuadAlpha;
+            obj.Z(3,3) = obj.d_parameters.costs.scQuadAlpha;
         end
 
         function initEqualityConstraints(obj)
@@ -366,6 +397,35 @@ classdef IpoptCasadi < handle
             end
         end
 
+        function initLinearTrackConstraint(obj)
+            for i = 1:obj.d_config.N+1
+
+                x = obj.X(1,i);
+                y = obj.X(2,i);
+                s = obj.X(7,i);
+
+                yOuter = obj.d_track.outerBorderInterpolation.y(s);
+                xOuter = obj.d_track.outerBorderInterpolation.x(s);
+
+                yInner = obj.d_track.innerBorderInterpolation.y(s);
+                xInner = obj.d_track.innerBorderInterpolation.x(s);
+
+                k = obj.d_track.centerLineDerivativesInterpolation.y(s)/obj.d_track.centerLineDerivativesInterpolation.x(s);
+
+                b1 = max(yOuter - k*xOuter,yInner - k*xInner);
+                b2 = min(yOuter - k*xOuter,yInner - k*xInner);
+
+                % track constraint: -inf <= y-kx-b1 <= 0.0
+                obj.g = [obj.g;y-k*x-b1+obj.S(1,i)];
+                
+                % track constraint: 0.0 <= y-kx-b2 <= inf
+                obj.g = [obj.g;y-k*x-b2+obj.S(1,i)];
+
+                % objective function with slack vars
+                obj.objective = obj.objective + obj.Z(1,1) * obj.S(1,i)^2;
+            end
+        end
+
         function initTiresConstraints(obj)
             for i = 1:obj.d_config.N+1
     
@@ -378,11 +438,11 @@ classdef IpoptCasadi < handle
                 lr = obj.d_car.lr;
 
                 % front slip angle constraint with slack variable
-                safg = atan2((vy + r*lf),vx) - steeringAngle + obj.S(1,i);
+                safg = atan2((vy + r*lf),vx) - steeringAngle + obj.S(2,i);
                 obj.g = [obj.g;safg];  
     
                 % rear slip angle constraint with slack variable
-                sarg = atan2((vy - r*lr),vx) + obj.S(2,i);
+                sarg = atan2((vy - r*lr),vx) + obj.S(3,i);
                 obj.g = [obj.g;sarg];
 
                 % soft constraints slack variables matrix
@@ -447,7 +507,6 @@ classdef IpoptCasadi < handle
             obj.args.lbg = zeros(obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1),1); % lower bounds for equality and inequality constraints
             obj.args.ubg = zeros(obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1),1); % upper bounds for equality and inequality constraints
 
-            % lower and upper bounds vals for states, inputs and slack variables
             % lower and upper bounds for states
           
             obj.args.lbx(1:obj.d_config.NX:obj.d_config.NX*(obj.d_config.N+1),1) = obj.d_parameters.bounds.lowerStateBounds.xL;
@@ -509,21 +568,57 @@ classdef IpoptCasadi < handle
             obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+4: ...
                                           obj.d_config.NU: ...
                                           obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N,1) = obj.d_parameters.bounds.upperInputBounds.dVsU;
-           
+
+            % lower and upper bounds vals for states, inputs and slack variables
+
+            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+1: ...
+                                          obj.d_config.NS: ...
+                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = -inf;
+
+            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+2: ...
+                                          obj.d_config.NS: ...
+                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = -inf;
+
+            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+3: ...
+                                          obj.d_config.NS: ...
+                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = -inf;
+
+            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+4: ...
+                                          obj.d_config.NS: ...
+                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = -inf;
+
+            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+1: ...
+                                          obj.d_config.NS: ...
+                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = inf;
+
+            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+2: ...
+                                          obj.d_config.NS: ...
+                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = inf;
+
+            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+3: ...
+                                          obj.d_config.NS: ...
+                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = inf;
+
+            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+4: ...
+                                          obj.d_config.NS: ...
+                                          obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = inf;
+
             % lower and upper bounds for equality and inequality constraints
             % lower and upper bounds for the equality constraints
             obj.args.lbg(1:obj.d_config.NX*(obj.d_config.N+1)) = 0;
             obj.args.ubg(1:obj.d_config.NX*(obj.d_config.N+1)) = 0;
             % lower and upper bounds for the inequality constraints
             % lower and upper bounds for the track constraint
-            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0.0;
-            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.rOut;
+            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -inf;
+            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0;
+            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0;
+            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = inf;
             % lower and upper bounds for the front slip angle
-            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
-            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
-            % lower and upper bounds for the rear slip angle
             obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
             obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
+            % lower and upper bounds for the rear slip angle
+            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 4:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
+            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 4:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
         end
 
         function ipoptReturn = runMPC(obj, x0)
@@ -585,12 +680,12 @@ classdef IpoptCasadi < handle
             obj.d_initialControlGuess = zeros(obj.d_config.NU,obj.d_config.N);
 
             obj.d_initialStateGuess(:,1) = x0;
-            obj.d_initialStateGuess(obj.d_config.siIndex.vx,1:obj.d_config.N+1) = obj.d_parameters.mpcModel.initialVelocity;
-            obj.d_initialStateGuess(obj.d_config.siIndex.vs,1:obj.d_config.N+1) = obj.d_parameters.mpcModel.initialVelocity;
+            obj.d_initialStateGuess(obj.d_config.siIndex.vx,2:obj.d_config.N+1) = x0(4);
+            obj.d_initialStateGuess(obj.d_config.siIndex.vs,1:obj.d_config.N+1) = x0(4);
 
             for i = 2:obj.d_config.N+1
               obj.d_initialStateGuess(obj.d_config.siIndex.s,i) =...
-                obj.d_initialStateGuess(obj.d_config.siIndex.s,i - 1) + obj.d_ts * obj.d_parameters.mpcModel.initialVelocity;
+                obj.d_initialStateGuess(obj.d_config.siIndex.s,i - 1) + obj.d_ts * obj.d_initialStateGuess(obj.d_config.siIndex.vs,i - 1);
               trackPosI = obj.d_track.centerLine.getPosition(obj.d_initialStateGuess(obj.d_config.siIndex.s,i));
               trackdPosI = obj.d_track.centerLine.getDerivative(obj.d_initialStateGuess(obj.d_config.siIndex.s,i));
               obj.d_initialStateGuess(obj.d_config.siIndex.x,i) = trackPosI(1);

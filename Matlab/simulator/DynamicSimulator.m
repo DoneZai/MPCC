@@ -1,4 +1,4 @@
-classdef Simulator < handle    
+classdef DynamicSimulator < handle    
     properties (Access = private)
         d_car;
 
@@ -10,7 +10,7 @@ classdef Simulator < handle
     
     methods (Access = public)
 
-        function obj = Simulator(car,tire)
+        function obj = DynamicSimulator(car,tire)
             obj.d_car = car;
             obj.d_frontWheel = Wheel(Side.FRONT,obj.d_car,tire);
             obj.d_rearWheel = Wheel(Side.REAR,obj.d_car,tire);
