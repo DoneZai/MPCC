@@ -65,8 +65,8 @@ track = Track(cones_blue, cones_yellow);
 
 parameters = Parameters(config);
 
-simulator = DynamicSimulator(parameters.car,parameters.tire);
-%simulator = KinematicSimulator(parameters.car,parameters.tire);
+%simulator = DynamicSimulator(parameters.car,parameters.tire);
+simulator = KinematicSimulator(parameters.car,parameters.tire);
 
 %mpc = Mpcc(config,parameters);
 mpc = IpoptCasadi(config,parameters);
@@ -90,10 +90,12 @@ x0 = [trackPath.x(1);trackPath.y(1);phi0;5;0;0;0;0;0;0;0];
 %testModel(mpc);
 %log(parameters.config.nSim) = MPCReturn();
 %for i = 1:parameters.config.nSim
-for i = 1:2
+for i = 1:100
     mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
     log(i) = mpcSol;
+    disp("Iteraton:");
+    disp(i);
 end
 
 plotRace(log,track,trackCenter,parameters,config);

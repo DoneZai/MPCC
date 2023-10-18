@@ -58,8 +58,8 @@ classdef IpoptCasadi < handle
         function initMPC(obj)
             obj.initSystemModel();
             obj.initEqualityConstraints();
-            obj.initLinearTrackConstraint();
-            %obj.initTrackConstraint();
+            %obj.initLinearTrackConstraint();
+            obj.initTrackConstraint();
             %obj.initTiresConstraints();
             obj.initCostFunction();
             obj.initIpoptSolver();
@@ -571,19 +571,19 @@ classdef IpoptCasadi < handle
 
             % lower and upper bounds vals for states, inputs and slack variables
 
-            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+1: ...
+            obj.args.lbx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+1: ...
                                           obj.d_config.NS: ...
                                           obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = -inf;
 
-            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+2: ...
+            obj.args.lbx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+2: ...
                                           obj.d_config.NS: ...
                                           obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = -inf;
 
-            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+3: ...
+            obj.args.lbx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+3: ...
                                           obj.d_config.NS: ...
                                           obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = -inf;
 
-            obj.args.ubx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+4: ...
+            obj.args.lbx(obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+4: ...
                                           obj.d_config.NS: ...
                                           obj.d_config.NX*(obj.d_config.N+1)+obj.d_config.NU*obj.d_config.N+obj.d_config.NS*(obj.d_config.N+1)) = -inf;
 
@@ -608,17 +608,20 @@ classdef IpoptCasadi < handle
             obj.args.lbg(1:obj.d_config.NX*(obj.d_config.N+1)) = 0;
             obj.args.ubg(1:obj.d_config.NX*(obj.d_config.N+1)) = 0;
             % lower and upper bounds for the inequality constraints
+            % lower and upper bounds for the linear track constraint
+            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -inf;
+            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0;
+            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0;
+            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = inf;
             % lower and upper bounds for the track constraint
-            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -inf;
-            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0;
-            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0;
-            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 2:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = inf;
+            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = 0;
+            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 1:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.rOut;
             % lower and upper bounds for the front slip angle
-            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
-            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
+            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
+            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 3:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
             % lower and upper bounds for the rear slip angle
-            obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 4:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
-            obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 4:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
+            %obj.args.lbg(obj.d_config.NX*(obj.d_config.N+1) + 4:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = -obj.d_parameters.mpcModel.maxAlpha;
+            %obj.args.ubg(obj.d_config.NX*(obj.d_config.N+1) + 4:obj.d_config.NS:obj.d_config.NX*(obj.d_config.N+1) + obj.d_config.NS*(obj.d_config.N+1)) = obj.d_parameters.mpcModel.maxAlpha;
         end
 
         function ipoptReturn = runMPC(obj, x0)
