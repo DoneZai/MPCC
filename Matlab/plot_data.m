@@ -1,14 +1,10 @@
-function plotRace(log,track,trackCenter,parameters,config)
-
-    stateVec = zeros(length(log(1).x0),length(log));
-    for i = 1:length(log)
-        stateVec(:,i) = log(i).x0;
-    end
     plotSize = length(log);
     
     %% race track and car state in X,Y coords
     figure(1);
     hold on;
+
+    stateVec = getStateVec(log);
    
     plot(track.xOuter,track.yOuter,'b');
     plot(track.xInner,track.yInner,'y');
@@ -119,4 +115,3 @@ function plotRace(log,track,trackCenter,parameters,config)
     %plot(1:plotSize,inputVec(4,:));
 %
     %legend('dthrottle','dsteeringAngle','dbrakes','dvs');
-end

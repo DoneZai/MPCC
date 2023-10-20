@@ -1,17 +1,19 @@
-classdef KinematicSimulator < handle    
+classdef Simulator < handle    
     properties (Access = private)
-        d_car;
-        d_tire;
+        car;
+        tire;
         f;
+        model;
     end
     
     methods (Access = public)
 
-        function obj = KinematicSimulator(car,tire)
+        function obj = Simulator(config,car,tire)
             import casadi.*;
 
-            obj.d_car = car;
-            obj.d_tire = tire;
+            obj.car = car;
+            obj.tire = tire;
+            obj.model = Model(car,tire);
 
             x = SX.sym('x');
             y = SX.sym('y');
@@ -34,53 +36,13 @@ classdef KinematicSimulator < handle
 
             input = [dThrottle,dSteeringAngle,dBrakes,dVs];
 
-            % car parameters
-            rDyn = obj.d_car.rDyn;
-            
-            cdrv = obj.d_car.cm1*obj.d_car.gearRatio;
-            cbf = obj.d_car.cbf;
-            cbr = obj.d_car.cbr;
-
-            m = obj.d_car.m;
-            lf = obj.d_car.lf;
-            lr = obj.d_car.lr;
-            gAcc = obj.d_car.g;
-
-            % normal load on the one front wheel
-            Ffz = lr*m*gAcc/(2.0*(lf+lr));
-
-            % normal load on the one rear wheel
-            Frz = lf*m*gAcc/(2.0*(lf+lr));
-            
-            % rolling resistance of the two front wheels
-            Ffrr = 2*obj.d_tire.QSY1*Ffz;
-
-            % rolling resistance of the two rear wheels
-            Frrr = 2*obj.d_tire.QSY1*Frz;
-
-            % longitudinal front force
-            Ffx = (-cbf*brakes)/rDyn + Ffrr;
-            
-            % longitudinal rear force
-            Frx = (-cbr*brakes+cdrv*throttle)/rDyn + Frrr;
-
-            % drag force
-            Fdrag = obj.d_car.cd*vx^2.0;
-
-            % dot vx
-            vxDot = 1/m*(Frx + cos(steeringAngle)*Ffx+Fdrag);
-
-            rhs = [vx*cos(yaw)-vy*sin(yaw);
-                   vx*sin(yaw)+vy*cos(yaw);
-                   r;
-                   vxDot;
-                   lr/(lr+lf)*(dSteeringAngle*vx+steeringAngle*vxDot);
-                   1/(lr+lf)*(dSteeringAngle*vx+steeringAngle*vxDot);
-                   vs;
-                   dThrottle;
-                   dSteeringAngle;
-                   dBrakes;
-                   dVs];
+            if strcmp(config.simulator,'kinematic')
+                rhs = obj.model.initKinematicModel(state,input);
+            elseif strcmp(config.simulator,'dynamic')
+                rhs = obj.model.initDynamicModel(state,input);
+            elseif strcmp(config.simulator,'simple_dynamic')
+                rhs = obj.model.initSimplifiedDynamicModel(state,input);
+            end
 
             obj.f = Function('f',{state,input},{rhs});
         end

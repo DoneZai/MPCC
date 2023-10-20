@@ -105,9 +105,9 @@ classdef IpoptCasadi < handle
         end
 
         function initSystemModel(obj)
-            % States
             import casadi.*;
 
+            % States
             x = MX.sym('x');
             y = MX.sym('y');
             yaw = MX.sym('yaw');

@@ -15,23 +15,28 @@ clear
 close all
 clc
 
-%% add spline library
-addpath('constraints');
-addpath('cost');
+%% add subdirectories
 addpath('model');
-addpath('mpc');
 addpath('parameters');
 addpath('simulator');
 addpath('spline');
 addpath('tracks');
 addpath('types');
 
-%addpath('/opt/casadi/');
 addpath('/opt/casadi/')
-
-import casadi.*;
+%% add subdirectories for the chosen solver
 
 config = config();
+
+if strcmp(config.solver,'ipopt')
+    addpath('Ipopt');
+elseif strcmp(config.solver,'hpipm')
+    addpath('HPIPM');
+elseif strcmp(config.solver,'acados')
+    addpath('Acados');
+end
+
+import casadi.*;
 
 % uncomment 33,34,36,37,39,40,42 to use FSG track
 
@@ -65,13 +70,13 @@ track = Track(cones_blue, cones_yellow);
 
 parameters = Parameters(config);
 
-simulator = DynamicSimulator(parameters.car,parameters.tire);
-%simulator = KinematicSimulator(parameters.car,parameters.tire);
+simulator = Simulator(config,parameters.car,parameters.tire);
 
 %mpc = Mpcc(config,parameters);
 mpc = IpoptCasadi(config,parameters);
 mpc.setTrack(track);
 mpc.initMPC();
+
 trackCenter = mpc.getTrack().getPath();
 
 %figure(1);
@@ -88,14 +93,11 @@ phi0 = atan2(trackPath.y(2) - trackPath.y(1),trackPath.x(2) - trackPath.x(1));
 x0 = [trackPath.x(1);trackPath.y(1);phi0;1;0;0;0;0;0;0;0];
 
 %testModel(mpc);
-%log(parameters.config.nSim) = MPCReturn();
-%for i = 1:parameters.config.nSim
-while lapClosed()
+log(parameters.config.nSim) = IpoptReturn();
+for i = 1:parameters.config.nSim
     mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
     log(i) = mpcSol;
     disp("Iteraton:");
     disp(i);
 end
-
-plotRace(log,track,trackCenter,parameters,config);
