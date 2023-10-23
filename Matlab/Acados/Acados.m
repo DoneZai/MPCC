@@ -7,9 +7,13 @@ classdef Acados < handle
         parameters
         carModel
 
+        track
+
         ocpModel
         ocpOpts
         ocp
+
+        p % parameters vector: [Xcen, Ycen, xRef, yRef, thetaRef];
     end
     
     methods (Access = public)
@@ -22,6 +26,35 @@ classdef Acados < handle
 
             obj.ocpModel = acados_obj.ocpModel();
             obj.ocpOpts = acados_obj.ocpOpts();
+        end
+
+        function setTrack(obj,track)
+            import casadi.*;
+
+            obj.track.centerLine.gen2DSpline([track.x;track.x],[track.y;track.y]);
+            obj.track.outerBorder.gen2DSpline([track.xOuter;track.xOuter],[track.yOuter,track.yOuter]);
+            obj.track.innerBorder.gen2DSpline([track.xInner;track.xInner],[track.yInner,track.yInner]);
+
+            centerLine = obj.track.centerLine.getPath();
+            outerBoredr = obj.track.outerBorder.getPath();
+            innerBorder = obj.track.innerBorder.getPath();
+
+            centerLineDerivatives = zeros(2,length(centerLine.s));
+            
+            for i = 1:length(centerLine.s)
+                centerLineDerivatives(:,i) = obj.track.centerLine.getDerivative(centerLine.s(i));
+            end
+            
+            obj.track.centerLineInterpolation.x = interpolant('center_line_interpolation_x','bspline',{centerLine.s},centerLine.x);
+            obj.track.centerLineInterpolation.y = interpolant('center_line_interpolation_y','bspline',{centerLine.s},centerLine.y);
+            obj.track.centerLineDerivativesInterpolation.x = interpolant('center_line_derivative_interpolation_x','bspline',{centerLine.s},centerLineDerivatives(1,:));
+            obj.track.centerLineDerivativesInterpolation.y = interpolant('center_line_derivative_interpolation_y','bspline',{centerLine.s},centerLineDerivatives(2,:));
+
+            obj.track.outerBorderInterpolation.x = interpolant('outerBorder_interpolation_x','bspline',{outerBoredr.s},outerBoredr.x);
+            obj.track.outerBorderInterpolation.y = interpolant('outerBorder_interpolation_y','bspline',{outerBoredr.s},outerBoredr.y);
+
+            obj.track.innerBorderInterpolation.x = interpolant('innerBorder_interpolation_x','bspline',{innerBorder.s},innerBorder.x);
+            obj.track.innerBorderInterpolation.y = interpolant('innerBorder_interpolation_y','bspline',{innerBorder.s},innerBorder.y);
         end
 
         function initMPC(obj)
@@ -70,9 +103,15 @@ classdef Acados < handle
             obj.ocpModel.set('sym_xdot',xdot);
             obj.ocpModel.set('dyn_type','explicit');
             obj.ocpModel.set('dyn_expr_f',rhs);
+
+            obj.p = SX.sym('p',obj.config.N*3 + (obj.config.N+1)*2,1); % parameters vector [Xcen, Ycen, xRef, yRef, thetaRef];
         end
 
         function initConstraints()
+            x = 
+            constr_expr_h = 
+            obj.ocpModel.set('constr_expr_h',);
+
             
         end
 

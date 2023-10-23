@@ -63,8 +63,8 @@ classdef IpoptCasadi < handle
             obj.initSystemModel();
             obj.initEqualityConstraints();
             %obj.initLinearTrackConstraint();
-            %obj.initNewTrackConstraint();
-            obj.initTrackConstraint();
+            obj.initNewTrackConstraint();
+            %obj.initTrackConstraint();
             obj.initTiresConstraints();
             obj.initCostFunction();
             obj.initIpoptSolver();
@@ -136,8 +136,8 @@ classdef IpoptCasadi < handle
             obj.f = Function('f',{states,controls},{rhs});
             
             obj.U = MX.sym('U',obj.config.NU,obj.config.N);
-            %obj.P = MX.sym('P',obj.config.NX + 2*(obj.config.N+1),1); % NX - initial state, 2*(obj.config.N+1) - track center coordinates
-            obj.P = MX.sym('P',obj.config.NX,1); % NX - initial state
+            obj.P = MX.sym('P',obj.config.NX + 2*(obj.config.N+1),1); % NX - initial state, 2*(obj.config.N+1) - track center coordinates
+            %obj.P = MX.sym('P',obj.config.NX,1); % NX - initial state
             obj.X = MX.sym('X',obj.config.NX,(obj.config.N+1));
             % slack variables matrix for soft constraints
             obj.S = MX.sym('S',obj.config.NS,(obj.config.N+1));
@@ -492,7 +492,7 @@ classdef IpoptCasadi < handle
             obj.initialStateGuess(:,obj.config.N+1) = full(obj.ode4(obj.initialStateGuess(:,obj.config.N),obj.initialControlGuess(:,obj.config.N)));
 
             obj.unwrapInitialGuess();
-            %obj.fillTrackCenterCoordinates();
+            obj.fillTrackCenterCoordinates();
         end
 
         function generateNewInitialGuess(obj,x0)
@@ -513,7 +513,7 @@ classdef IpoptCasadi < handle
               obj.initialStateGuess(obj.config.siIndex.yaw,i) = atan2(trackdPosI(2), trackdPosI(1));
             end
             obj.unwrapInitialGuess();
-            %obj.fillTrackCenterCoordinates();
+            obj.fillTrackCenterCoordinates();
             obj.validInitialGuess = true;
         end
 
