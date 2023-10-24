@@ -1,4 +1,4 @@
-classdef Acados < handle
+classdef Acados2 < handle
     %ACADOS Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -26,7 +26,7 @@ classdef Acados < handle
     end
     
     methods (Access = public)
-        function obj = Acados(config,parameters)
+        function obj = Acados2(config,parameters)
             check_acados_requirements();
 
             obj.config = config;
@@ -77,9 +77,6 @@ classdef Acados < handle
 
         function initMPC(obj)
             obj.initOcpModel();
-            obj.initCost();
-            obj.initConstraints();
-            obj.inintSlackTerms();
             obj.setBounds();
             obj.setOCPOpts();
         end
@@ -88,160 +85,23 @@ classdef Acados < handle
             obj.ocpModel.set('name','acados_mpcc');
             obj.ocpModel.set('T', obj.config.N*obj.ts);
 
-            import casadi.*;
+            model = getModel(obj.parameters);
+
+            obj.ocpModel.set('sym_x',model.x);
+            obj.ocpModel.set('sym_u',model.u);
+            obj.ocpModel.set('sym_p',model.p);
+            obj.ocpModel.set('sym_z',model.z);
+            obj.ocpModel.set('sym_xdot',model.xdot);
             
-            % States
-            x = SX.sym('x');
-            y = SX.sym('y');
-            yaw = SX.sym('yaw');
-            vx = SX.sym('vx');
-            vy = SX.sym('vy');
-            r = SX.sym('r');
-            s = SX.sym('s');
-            throttle = SX.sym('throttle');
-            steeringAngle = SX.sym('steeringAngle');
-            brakes = SX.sym('brakes');
-            vs = SX.sym('vs');
+            %obj.ocpModel.set('dyn_type','implicit');
+            %obj.ocpModel.set('dyn_expr_f',model.f_impl_expr);
 
-            obj.state = [x;y;yaw;vx;vy;r;s;throttle;steeringAngle;brakes;vs];
-
-            % Controls
-            dThrottle = SX.sym('dThrottle');
-            dSteeringAngle = SX.sym('dSteeringAngle');
-            dBrakes = SX.sym('dBrakes');
-            dVs = SX.sym('dVs');
-
-            obj.input = [dThrottle;dSteeringAngle;dBrakes;dVs];
-            
-            % Rate of stete change
-            xdot = SX.sym('xdot', obj.config.NX, 1);
-
-            % Dynamics
-            rhs = obj.carModel.initSimpleCombinedModel(obj.state,obj.input);
-
-            % parameters vector [xCen, yCen, xRef, yRef, thetaRef];
-            obj.p = SX.sym('p',5,1);
-
-            obj.ocpModel.set('sym_x',obj.state);
-            obj.ocpModel.set('sym_u',obj.input);
-            obj.ocpModel.set('sym_p',obj.p);
-            obj.ocpModel.set('sym_z',[]);
-            obj.ocpModel.set('sym_xdot',xdot);
             obj.ocpModel.set('dyn_type','explicit');
-            obj.ocpModel.set('dyn_expr_f',rhs);       
-        end
+            obj.ocpModel.set('dyn_expr_f',model.f_expl_expr);
 
-        function initCost(obj)
-            % Coeffs for laf and contouring errors penallization
-            Q = diag([obj.parameters.costs.qC, ...
-                      obj.parameters.costs.qL]);
-           
-            q = obj.parameters.costs.qVs;
-            
-            % Coeffs for control inputs penalization
-            R = diag([obj.parameters.costs.rThrottle, ...
-                      obj.parameters.costs.rSteeringAngle, ...
-                      obj.parameters.costs.rBrakes, ...
-                      obj.parameters.costs.rVs]);
-
-            x = obj.state(1);
-            y = obj.state(2);
-            vs = obj.state(11);
-            
-            xRef = obj.p(3);
-            yRef = obj.p(4);
-            thetaRef = obj.p(5);
-
-            %xRef = 0;
-            %yRef = 0;
-            %thetaRef = 0;
-
-            % contouring error
-            ec = -sin(thetaRef) * (xRef - x)...
-                                    + cos(thetaRef) * (yRef - y);
-            % lag error
-            el = cos(thetaRef) * (xRef - x)...
-                                    + sin(thetaRef) * (yRef - y);
-            
-            error = [ec;el];
-
-            cost_expt_ext_cost = error' * Q * error + obj.input'*R*obj.input - q*vs; 
-
-            %obj.ocpModel.set('cost_type','ext_cost');
-            obj.ocpModel.set('cost_expr_ext_cost',cost_expt_ext_cost);
-            %obj.ocpModel.set('cost_expr_ext_cost_e',0);
-        end
-
-        function initConstraints(obj)
-            
-            constr_expr_h = [];
-            constr_lh = [];
-            constr_uh = [];
-
-            % track constraint
-            constr_expr_h = [constr_expr_h,obj.initTrackConstraint()];
-            constr_lh = [constr_lh,0];
-            constr_uh = [constr_uh,obj.parameters.mpcModel.rOut];
-            % front slip angle constraint
-            constr_expr_h = [constr_expr_h,obj.initFrontSlipAngleConstraint()];
-            constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
-            constr_uh = [constr_uh,obj.parameters.mpcModel.maxAlpha];
-            % rear slip angle constraint
-            constr_expr_h = [constr_expr_h,obj.initRearSlipAngleConstraint()];
-            constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
-            constr_uh = [constr_uh,obj.parameters.mpcModel.maxAlpha];
-
-            obj.ocpModel.set('constr_expr_h',constr_expr_h);
-            obj.ocpModel.set('constr_lh',constr_lh);
-            obj.ocpModel.set('constr_uh',constr_uh);
-        end
-
-        function inintSlackTerms(obj)
-            % Coeffs for soft constraints penalization
-            % quadratic part
-            Z = diag([obj.parameters.costs.scQuadTrack, obj.parameters.costs.scQuadAlpha, obj.parameters.costs.scQuadAlpha]);
-            % linear part
-            z = [obj.parameters.costs.scLinTrack, obj.parameters.costs.scLinAlpha, obj.parameters.costs.scLinAlpha];
-
-            jsh = eye(obj.config.NS); % all constraints are softened
-            
-            obj.ocpModel.set('constr_Jsh',jsh);
-            obj.ocpModel.set('cost_Z',Z);
-            obj.ocpModel.set('cost_z',z);
-        end
-
-        % track constraint
-        function expr = initTrackConstraint(obj)
-            x = obj.state(1);
-            y = obj.state(2);
-
-            xCen = obj.p(1);
-            yCen = obj.p(2);
-
-            expr = (x-xCen)^2 + (y-yCen)^2;
-        end
-        
-        % front slip angle constraint
-        function expr = initFrontSlipAngleConstraint(obj)
-            vx = obj.state(4);
-            vy = obj.state(5);
-            r = obj.state(6);
-            steeringAngle = obj.state(9);
-
-            lf = obj.car.lf;
-
-            expr = atan2((vy + r*lf),vx) - steeringAngle; 
-        end
-        
-        % rear slip angle constraint
-        function expr = initRearSlipAngleConstraint(obj)
-            vx = obj.state(4);
-            vy = obj.state(5);
-            r = obj.state(6);
-
-            lr = obj.car.lr;
-
-            expr = atan2((vy - r*lr),vx);
+            obj.ocpModel.set('cost_expr_ext_cost',model.cost_expr_ext_cost);
+            obj.ocpModel.set('constr_expr_h',model.constr_expr_h);
+    
         end
 
         function setBounds(obj)
@@ -295,6 +155,29 @@ classdef Acados < handle
                                             obj.parameters.bounds.upperInputBounds.dSteeringAngleU, ...
                                             obj.parameters.bounds.upperInputBounds.dBrakesU]);
 
+            % track, front slip angle, rear slip angle constraints
+            constr_lh = [0, ...
+                         -obj.parameters.mpcModel.maxAlpha, ...
+                         -obj.parameters.mpcModel.maxAlpha];
+            
+            constr_uh = [obj.parameters.mpcModel.rOut, ...
+                         obj.parameters.mpcModel.maxAlpha, ...
+                         obj.parameters.mpcModel.maxAlpha];
+           
+            obj.ocpModel.set('constr_lh',constr_lh);
+            obj.ocpModel.set('constr_uh',constr_uh);
+
+            % Coeffs for soft constraints penalization
+            % quadratic part
+            Z = diag([obj.parameters.costs.scQuadTrack, obj.parameters.costs.scQuadAlpha, obj.parameters.costs.scQuadAlpha]);
+            % linear part
+            z = [obj.parameters.costs.scLinTrack, obj.parameters.costs.scLinAlpha, obj.parameters.costs.scLinAlpha];
+
+            jsh = eye(obj.config.NS); % all constraints are softened
+            
+            obj.ocpModel.set('constr_Jsh',jsh);
+            obj.ocpModel.set('cost_Z',Z);
+            obj.ocpModel.set('cost_z',z);
         end
 
         function setOCPOpts(obj)

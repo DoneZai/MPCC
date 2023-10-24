@@ -27,16 +27,17 @@ addpath('/opt/casadi/')
 %% add subdirectories for the chosen solver
 
 config = config();
+parameters = Parameters(config);
 
 if strcmp(config.solver,'ipopt')
     addpath('Ipopt');
+    mpc = IpoptCasadi(config,parameters);
 elseif strcmp(config.solver,'hpipm')
     addpath('HPIPM');
 elseif strcmp(config.solver,'acados')
     addpath('Acados');
+    mpc = Acados2(config,parameters);
 end
-
-import casadi.*;
 
 % uncomment 33,34,36,37,39,40,42 to use FSG track
 
@@ -68,12 +69,9 @@ track = Track(cones_blue, cones_yellow);
 
 %track = Track(trackOuter,trackInner,trackCenter);
 
-parameters = Parameters(config);
-
 simulator = Simulator(config,parameters.car,parameters.tire);
 
 %mpc = Mpcc(config,parameters);
-mpc = IpoptCasadi(config,parameters);
 mpc.setTrack(track);
 mpc.initMPC();
 

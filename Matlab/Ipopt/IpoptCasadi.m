@@ -308,8 +308,8 @@ classdef IpoptCasadi < handle
             obj.opts.ipopt.max_iter = 200;
             obj.opts.ipopt.print_level = 3;%0,3
             obj.opts.print_time = 0;
-            obj.opts.compiler = 'shell';
-            obj.opts.jit = true;
+            %obj.opts.compiler = 'shell';
+            %obj.opts.jit = true;
             obj.opts.ipopt.acceptable_tol =1e-8;
             obj.opts.ipopt.acceptable_obj_change_tol = 1e-6;
             obj.opts.ipopt.linear_solver = 'ma27';
