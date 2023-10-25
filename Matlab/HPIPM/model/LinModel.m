@@ -1,4 +1,4 @@
-classdef Model
+classdef LinModel
     %MODEL Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -14,7 +14,7 @@ classdef Model
     end
     
     methods (Access = public)
-        function obj = Model(config,ts,car,tire)
+        function obj = LinModel(config,ts,car,tire)
             obj.d_config = config;
             obj.d_ts = ts;
             obj.d_car = car;

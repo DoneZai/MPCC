@@ -33,10 +33,11 @@ if strcmp(config.solver,'ipopt')
     addpath('Ipopt');
     mpc = IpoptCasadi(config,parameters);
 elseif strcmp(config.solver,'hpipm')
-    addpath('HPIPM');
-elseif strcmp(config.solver,'acados')
-    addpath('Acados');
-    mpc = Acados2(config,parameters);
+    addpath(genpath('HPIPM'));
+    mpc = Mpcc(config,parameters);
+else
+    disp('Wrong solver, choose another one in config.m');
+    return
 end
 
 % uncomment 33,34,36,37,39,40,42 to use FSG track
@@ -71,18 +72,9 @@ track = Track(cones_blue, cones_yellow);
 
 simulator = Simulator(config,parameters.car,parameters.tire);
 
-%mpc = Mpcc(config,parameters);
 mpc.setTrack(track);
-mpc.initMPC();
 
 trackCenter = mpc.getTrack().getPath();
-
-%figure(1);
-%hold on;
-%plot(track.xOuter,track.yOuter,'b');
-%plot(track.xInner,track.yInner,'y');
-%plot(trackCenter.x,trackCenter.y);
-%legend('outer_border','inner_border','center_line');
 
 trackPath = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();

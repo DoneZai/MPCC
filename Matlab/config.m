@@ -1,5 +1,5 @@
 function config = config()
-    config.solver = 'acados'; % ipopt, hpipm, acados
+    config.solver = 'hpipm'; % ipopt, hpipm
     config.simulator = 'dynamic'; % kinematic, simple_dynamic, dynamic
     config.NX = 11;
     config.NU  = 4;

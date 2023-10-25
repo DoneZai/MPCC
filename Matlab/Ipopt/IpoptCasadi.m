@@ -57,6 +57,8 @@ classdef IpoptCasadi < handle
             obj.track.centerLine = ArcLengthSpline(config,parameters.mpcModel);
             obj.track.outerBorder = ArcLengthSpline(config,parameters.mpcModel);
             obj.track.innerBorder = ArcLengthSpline(config,parameters.mpcModel);
+
+            obj.initMPC();
         end
 
         function initMPC(obj)

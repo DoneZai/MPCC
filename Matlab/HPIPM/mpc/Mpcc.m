@@ -56,7 +56,7 @@ classdef Mpcc < handle
             obj.d_nNoSolvesSqp = 0.0;
             obj.d_nReset = parameters.config.nReset;
             
-            obj.d_model = Model(obj.d_config,obj.d_ts,parameters.car,parameters.tire);
+            obj.d_model = LinModel(obj.d_config,obj.d_ts,parameters.car,parameters.tire);
             obj.d_cost = Cost(obj.d_config,parameters.costs, parameters.car);
             obj.d_constraints = Constraints(obj.d_config,obj.d_ts,parameters.mpcModel,parameters.car,parameters.tire);
             obj.d_track = ArcLengthSpline(obj.d_config,parameters.mpcModel);
@@ -105,8 +105,8 @@ classdef Mpcc < handle
             mpcReturn = MPCReturn(obj.d_initialGuess(2).xk, obj.d_initialGuess(1).uk, obj.d_initialGuess,obj.d_stages,solverStatus);
         end
 
-        function setTrack(obj,x,y)
-            obj.d_track.gen2DSpline(x,y);
+        function setTrack(obj,track)
+            obj.d_track.gen2DSpline(track.x,track.y);
         end
     
         function track = getTrack(obj)
