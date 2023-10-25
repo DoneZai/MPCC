@@ -1,12 +1,12 @@
 function config = config()
-    config.solver = 'hpipm'; % ipopt, hpipm
+    config.solver = 'ipopt'; % ipopt, hpipm
     config.simulator = 'dynamic'; % kinematic, simple_dynamic, dynamic
     config.NX = 11;
     config.NU  = 4;
     
     config.NB = 11;  % max number of bounds
-    config.NPC = 2;  % number of polytopic constraints
-    config.NS = 3; % number of soft constraints (two slip angles and track)
+    config.NPC = 3;  % number of polytopic constraints (2 for hpipm and 3 for ipopt)
+    config.NS = 3; % number of softened constraints (2 for hpipm and 3 for ipopt)
 
     config.N = 40;
     config.NSpline = 5000;

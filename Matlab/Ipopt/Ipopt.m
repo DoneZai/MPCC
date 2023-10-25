@@ -1,4 +1,4 @@
-classdef IpoptCasadi < handle
+classdef Ipopt < handle
     %UNTITLED Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -43,7 +43,7 @@ classdef IpoptCasadi < handle
     end
     
     methods (Access = public)
-        function obj = IpoptCasadi(config,parameters)
+        function obj = Ipopt(config,parameters)
             obj.config = config;
             obj.parameters = parameters;
             obj.ts = parameters.config.ts;
@@ -57,8 +57,6 @@ classdef IpoptCasadi < handle
             obj.track.centerLine = ArcLengthSpline(config,parameters.mpcModel);
             obj.track.outerBorder = ArcLengthSpline(config,parameters.mpcModel);
             obj.track.innerBorder = ArcLengthSpline(config,parameters.mpcModel);
-
-            obj.initMPC();
         end
 
         function initMPC(obj)
@@ -100,6 +98,8 @@ classdef IpoptCasadi < handle
 
             obj.track.innerBorderInterpolation.x = interpolant('innerBorder_interpolation_x','bspline',{innerBorder.s},innerBorder.x);
             obj.track.innerBorderInterpolation.y = interpolant('innerBorder_interpolation_y','bspline',{innerBorder.s},innerBorder.y);
+
+            obj.initMPC();
         end
 
         function track = getTrack(obj)
@@ -310,8 +310,8 @@ classdef IpoptCasadi < handle
             obj.opts.ipopt.max_iter = 200;
             obj.opts.ipopt.print_level = 3;%0,3
             obj.opts.print_time = 0;
-            %obj.opts.compiler = 'shell';
-            %obj.opts.jit = true;
+            obj.opts.compiler = 'shell';
+            obj.opts.jit = true;
             obj.opts.ipopt.acceptable_tol =1e-8;
             obj.opts.ipopt.acceptable_obj_change_tol = 1e-6;
             obj.opts.ipopt.linear_solver = 'ma27';
@@ -467,7 +467,7 @@ classdef IpoptCasadi < handle
             obj.initialControlGuess = reshape(full(sol.x(obj.config.NX*(obj.config.N+1)+1:obj.config.NX*(obj.config.N+1)+obj.config.NU*obj.config.N))', ...
                                    obj.config.NU,obj.config.N);
 
-            ipoptReturn = IpoptReturn;
+            ipoptReturn = MpcReturn();
 
             ipoptReturn.x0 = obj.initialStateGuess(:,1);
             ipoptReturn.u0 = obj.initialControlGuess(:,1);

@@ -17,6 +17,7 @@ clc
 
 %% add subdirectories
 addpath('model');
+addpath('mpc');
 addpath('parameters');
 addpath('simulator');
 addpath('spline');
@@ -31,7 +32,7 @@ parameters = Parameters(config);
 
 if strcmp(config.solver,'ipopt')
     addpath('Ipopt');
-    mpc = IpoptCasadi(config,parameters);
+    mpc = Ipopt(config,parameters);
 elseif strcmp(config.solver,'hpipm')
     addpath(genpath('HPIPM'));
     mpc = Mpcc(config,parameters);
@@ -40,35 +41,10 @@ else
     return
 end
 
-% uncomment 33,34,36,37,39,40,42 to use FSG track
-
 trackNameFile = 'FSG.mat'; %track name
 load(trackNameFile);
 
 track = Track(cones_blue, cones_yellow);
-
-%uncomment 46,47 to use MPCC track for the fullscale
-
-%[cones_blue,cones_yellow,center_line] = generateTestTrack();
-%track = Track(cones_blue,cones_yellow,center_line);
-
-%uncomment 51,52,53,55,56,58,59,61,62,64 to use presplined FSG track from
-%nirajbasnet
-
-%trackOuterTable = readtable('track_outer.csv');
-%trackInnerTable = readtable('track_inner.csv');
-%trackCenterTable = readtable('track_center.csv');
-
-%trackOuter(:,1) = trackOuterTable.Var1;
-%trackOuter(:,2) = trackOuterTable.Var2;
-
-%trackInner(:,1) = trackInnerTable.Var1;
-%trackInner(:,2) = trackInnerTable.Var2;
-
-%trackCenter(:,1) = trackCenterTable.Var1;
-%trackCenter(:,2) = trackCenterTable.Var2;
-
-%track = Track(trackOuter,trackInner,trackCenter);
 
 simulator = Simulator(config,parameters.car,parameters.tire);
 
@@ -80,10 +56,9 @@ trackPath = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
 phi0 = atan2(trackPath.y(2) - trackPath.y(1),trackPath.x(2) - trackPath.x(1));
-x0 = [trackPath.x(1);trackPath.y(1);phi0;1;0;0;0;0;0;0;0];
+x0 = [trackPath.x(1);trackPath.y(1);phi0;15;0;0;0;0;0;0;0];
 
-%testModel(mpc);
-log(parameters.config.nSim) = IpoptReturn();
+log(parameters.config.nSim) = MpcReturn();
 for i = 1:parameters.config.nSim
     mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
