@@ -36,6 +36,9 @@ if strcmp(config.solver,'ipopt')
 elseif strcmp(config.solver,'hpipm')
     addpath(genpath('HPIPM'));
     mpc = Mpcc(config,parameters);
+elseif strcmp(config.solver,'acados')
+    addpath('Acados/');
+    mpc = Acados2(config,parameters);
 else
     disp('Wrong solver, choose another one in config.m');
     return
