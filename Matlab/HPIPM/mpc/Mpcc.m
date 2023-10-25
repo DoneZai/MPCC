@@ -56,7 +56,7 @@ classdef Mpcc < handle
             obj.d_nNoSolvesSqp = 0.0;
             obj.d_nReset = parameters.config.nReset;
             
-            obj.d_model = Model(obj.d_config,obj.d_ts,parameters.car,parameters.tire);
+            obj.d_model = LinModel(obj.d_config,obj.d_ts,parameters.car,parameters.tire);
             obj.d_cost = Cost(obj.d_config,parameters.costs, parameters.car);
             obj.d_constraints = Constraints(obj.d_config,obj.d_ts,parameters.mpcModel,parameters.car,parameters.tire);
             obj.d_track = ArcLengthSpline(obj.d_config,parameters.mpcModel);
@@ -67,9 +67,10 @@ classdef Mpcc < handle
             %obj.d_solverInterface = HpipmInterface(obj.d_config);
         end
 
-        function mpcReturn = runMPC(obj,x0)
+        function mpcReturn = runMPC(obj,xVec)
             %profile on;
             solverStatus = -1;
+            x0 = vectorToState(xVec);
             x0.s = obj.d_track.projectOnSpline(x0);
             x0.unwrap(obj.d_track.getLength());
             if obj.d_validInitialGuess
@@ -102,11 +103,11 @@ classdef Mpcc < handle
             if obj.d_nNonSolves >= obj.d_nReset
               obj.d_validInitialGuess = false;
             end
-            mpcReturn = MPCReturn(obj.d_initialGuess(2).xk, obj.d_initialGuess(1).uk, obj.d_initialGuess,obj.d_stages,solverStatus);
+            mpcReturn = MpcReturn(stateToVector(obj.d_initialGuess(2).xk), inputToVector(obj.d_initialGuess(1).uk), obj.getInitialGuessMatrix(),solverStatus);
         end
 
-        function setTrack(obj,x,y)
-            obj.d_track.gen2DSpline(x,y);
+        function setTrack(obj,track)
+            obj.d_track.gen2DSpline(track.x,track.y);
         end
     
         function track = getTrack(obj)
@@ -115,6 +116,13 @@ classdef Mpcc < handle
     end
 
     methods (Access = private)
+
+        function matrix = getInitialGuessMatrix(obj)
+            matrix = zeros(11,length(obj.d_initialGuess));
+            for i = 1:length(obj.d_initialGuess)
+                matrix(:,i) =  stateToVector(obj.d_initialGuess(i).xk);
+            end
+        end
 
         function setMPCProblem(obj)
             for i = 1:obj.d_config.N
@@ -136,7 +144,7 @@ classdef Mpcc < handle
                 obj.d_stages(timeStep).ns = obj.d_config.NS;
               end
             
-              vxZero = obj.d_mpcModel.vxZero;
+              vxZero = obj.d_mpcModel.initialVelocity;
             
               xkNz = xk;
               xkNz.vxNonZero(vxZero);

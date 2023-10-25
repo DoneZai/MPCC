@@ -11,7 +11,7 @@ classdef Constraints
     methods (Access = public)
         function obj = Constraints(config,ts,modelParameters,carParameters,tireParameters)
             obj.d_config = config;
-            obj.d_model = Model(obj.d_config,ts,carParameters,tireParameters);
+            obj.d_model = LinModel(obj.d_config,ts,carParameters,tireParameters);
             obj.d_parameters = modelParameters;
         end
 
