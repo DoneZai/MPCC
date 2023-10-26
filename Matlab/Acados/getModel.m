@@ -53,8 +53,11 @@ function model = getModel(parameters)
     
     % dynamics
     carModel = Model(parameters.car,parameters.tire);
-    f_expl = carModel.initSimpleCombinedModel(state,input);
+    %f_expl = carModel.initSimpleCombinedModel(state,input);
+    f_expl = carModel.initKinematicModel(state,input);
     f_impl = f_expl - xdot;
+
+    f = Function('f',{state,input},{f_expl});
 
     % cost
     % contouring error
@@ -79,24 +82,37 @@ function model = getModel(parameters)
               parameters.costs.rVs]);
 
     cost_expr_ext_cost = error' * Q * error + input'*R*input - q*vs;
+    cost_expr_ext_cost_e = [0;0]' * Q * [0;0] - q*0;
 
     % constraints 
     lf = parameters.car.lf;
     lr = parameters.car.lr;
+    
+    constr_expr_h = [];
 
-    constr_expr_h = [(x-xCen)^2 + (y-yCen)^2, ...
-                   atan2((vy + r*lf),vx) - steeringAngle, ...
-                   atan2((vy - r*lr),vx)];
+    % track constraint
+    constr_expr_h = [constr_expr_h;
+                     (x-xCen)^2 + (y-yCen)^2];
+
+    % front slip angle constraint
+    %constr_expr_h = [constr_expr_h;
+    %                 atan2((vy + r*lf),vx) - steeringAngle];
+
+    % rear slip angle constraint
+    %constr_expr_h = [constr_expr_h;
+    %                 atan2((vy - r*lr),vx)];
 
     % model filling
     model.f_expl_expr = f_expl;
     model.f_impl_expr = f_impl;
+    model.f = f;
     model.x = state;
     model.xdot = xdot;
     model.u = input;
     model.p = p;
     model.z = z;
     model.cost_expr_ext_cost = cost_expr_ext_cost;
+    model.cost_expr_ext_cost_e = cost_expr_ext_cost_e;
     model.constr_expr_h = constr_expr_h;
 end
 

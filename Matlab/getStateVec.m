@@ -4,4 +4,3 @@ function stateVec = getStateVec(log)
             stateVec(:,i) = log(i).x0;
         end
 end
-

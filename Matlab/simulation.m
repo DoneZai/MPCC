@@ -24,7 +24,7 @@ addpath('spline');
 addpath('tracks');
 addpath('types');
 
-addpath('/opt/casadi/')
+%addpath('/opt/casadi/')
 %% add subdirectories for the chosen solver
 
 config = config();
@@ -58,11 +58,13 @@ trackCenter = mpc.getTrack().getPath();
 trackPath = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
-phi0 = atan2(trackPath.y(2) - trackPath.y(1),trackPath.x(2) - trackPath.x(1));
-x0 = [trackPath.x(1);trackPath.y(1);phi0;15;0;0;0;0;0;0;0];
+phi0 = atan2(trackPath.y(11) - trackPath.y(10),trackPath.x(11) - trackPath.x(10));
+x0 = [trackPath.x(10);trackPath.y(10);phi0;5;0;0;0;0;0;0;0];
 
-log(parameters.config.nSim) = MpcReturn();
+mpc.initMPC(x0);
+
 for i = 1:parameters.config.nSim
+%for i = 1:10
     mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
     log(i) = mpcSol;
