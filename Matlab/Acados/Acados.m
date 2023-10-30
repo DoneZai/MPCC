@@ -26,6 +26,7 @@ classdef Acados < handle
         validInitialGuess
 
         f
+        paramVec
     end
     
     methods (Access = public)
@@ -47,6 +48,8 @@ classdef Acados < handle
             obj.track.centerLine = ArcLengthSpline(config,parameters.mpcModel);
             obj.track.outerBorder = ArcLengthSpline(config,parameters.mpcModel);
             obj.track.innerBorder = ArcLengthSpline(config,parameters.mpcModel);
+
+            obj.paramVec = zeros(4,obj.config.N+1);
         end
 
         function setTrack(obj,track)
@@ -112,12 +115,15 @@ classdef Acados < handle
             
             obj.ocpModel.set('cost_type','ext_cost');
             obj.ocpModel.set('cost_type_e','ext_cost');
+
+            obj.ocpModel.set('cost_ext_fun_type','casadi');
+            obj.ocpModel.set('cost_ext_fun_type_e','casadi');
             
             obj.ocpModel.set('constr_x0', x0);
             obj.ocpModel.set('cost_expr_ext_cost',model.cost_expr_ext_cost);
             obj.ocpModel.set('cost_expr_ext_cost_e',model.cost_expr_ext_cost_e);
 
-            obj.ocpModel.set('constr_expr_h',model.constr_expr_h);
+            %obj.ocpModel.set('constr_expr_h',model.constr_expr_h);
 
             obj.f = model.f;
         end
@@ -147,12 +153,12 @@ classdef Acados < handle
 
             obj.ocpModel.set('constr_ubx',[ ...
                                             2*pi, ...
-                                            15, ...
+                                            6, ...
                                             10e8, ...
                                             obj.parameters.bounds.upperStateBounds.throttleU, ...
                                             obj.parameters.bounds.upperStateBounds.steeringAngleU, ...
                                             obj.parameters.bounds.upperStateBounds.brakesU, ...
-                                            10e8]);
+                                            6]);
 
             nbu = 4;
             jbu = zeros(nbu,obj.config.NU);
@@ -177,13 +183,13 @@ classdef Acados < handle
                                             obj.parameters.bounds.upperInputBounds.dVsU]);
 
             % track, front slip angle, rear slip angle constraints
-            constr_lh = [];
-            constr_uh = [];
+            %constr_lh = [];
+            %constr_uh = [];
 
             % track constraint bounds
-            constr_lh = [constr_lh,0];
+            %constr_lh = [constr_lh,0];
             
-            constr_uh = [constr_uh,obj.parameters.mpcModel.rOut];
+            %constr_uh = [constr_uh,obj.parameters.mpcModel.rOut^2];
 
             % front slip angle constraint
             %constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
@@ -195,8 +201,8 @@ classdef Acados < handle
             %
             %constr_uh = [constr_uh,obj.parameters.mpcModel.maxAlpha];
            
-            obj.ocpModel.set('constr_lh',constr_lh);
-            obj.ocpModel.set('constr_uh',constr_uh);
+            %obj.ocpModel.set('constr_lh',constr_lh);
+            %obj.ocpModel.set('constr_uh',constr_uh);
 
             % Coeffs for soft constraints penalization
             % quadratic part
@@ -205,15 +211,15 @@ classdef Acados < handle
             %z = [obj.parameters.costs.scLinTrack; obj.parameters.costs.scLinAlpha; obj.parameters.costs.scLinAlpha];
             %jsh = eye(obj.config.NS); % all constraints are softened
 
-            Z = diag([obj.parameters.costs.scQuadTrack]);
+            %Z = diag([obj.parameters.costs.scQuadTrack]);
             % linear part
-            z = [obj.parameters.costs.scLinTrack];
+            %z = [obj.parameters.costs.scLinTrack];
 
-            jsh = eye(1); % all constraints are softened
+            %jsh = eye(1); % all constraints are softened
             
-            obj.ocpModel.set('constr_Jsh',jsh);
-            obj.ocpModel.set('cost_Z',Z);
-            obj.ocpModel.set('cost_z',z);
+            %obj.ocpModel.set('constr_Jsh',jsh);
+            %obj.ocpModel.set('cost_Z',Z);
+            %obj.ocpModel.set('cost_z',z);
         end
 
         function setOCPOpts(obj)
@@ -253,17 +259,12 @@ classdef Acados < handle
             obj.fillParametersVector();
             
             obj.ocp.set('constr_x0', obj.initialStateGuess(:,1))
-            obj.ocp.set('constr_lbx', obj.initialStateGuess(:,1), 0);
-            obj.ocp.set('constr_ubx', obj.initialStateGuess(:,1), 0);
+            %obj.ocp.set('constr_lbx', obj.initialStateGuess(:,1), 0);
+            %obj.ocp.set('constr_ubx', obj.initialStateGuess(:,1), 0);
 
-            obj.ocp.set('init_x', ones(11,obj.config.N+1));
-            tempState = zeros(11,obj.config.N+1);
-            obj.ocp.get('x', tempState);
-            
-            obj.ocp.set('init_u', ones(4,obj.config.N));
-            tempControl = zeros(4,obj.config.N);
-            obj.ocp.get('u', tempControl);
-            %obj.ocp.set('init_pi', zeros(obj.config.NX, obj.config.N));
+            obj.ocp.set('init_x', obj.initialStateGuess);
+            obj.ocp.set('init_u', obj.initialControlGuess);
+            obj.ocp.set('init_pi', zeros(obj.config.NX, obj.config.N));
 
             obj.ocp.solve();
 
@@ -276,6 +277,9 @@ classdef Acados < handle
             obj.initialStateGuess = obj.ocp.get('x');
             obj.initialControlGuess = obj.ocp.get('u');
 
+            [cost_expr_ext_cost,cost_expr_ext_cost_e] = obj.computeCost();
+            ocpCost = obj.ocp.get_cost;
+
             sol = MpcReturn;
 
             sol.x0 = obj.initialStateGuess(:,1);
@@ -284,19 +288,16 @@ classdef Acados < handle
         end
 
         function fillParametersVector(obj)
-            for i = 1:obj.config.N
-                s = obj.initialStateGuess(7,i);
-                sNext = obj.initialStateGuess(7,i+1);
-
-                xCenter = full(obj.track.centerLineInterpolation.x(s));
-                yCenter = full(obj.track.centerLineInterpolation.y(s));
+            for i = 1:obj.config.N+1
+                s0 = obj.initialStateGuess(7,i);
                 
-                xRef = full(obj.track.centerLineInterpolation.x(sNext));
-                yRef = full(obj.track.centerLineInterpolation.y(sNext));
+                xTrack = full(obj.track.centerLineInterpolation.x(s0));
+                yTrack = full(obj.track.centerLineInterpolation.y(s0));
 
-                thetaRef = full(atan2(obj.track.centerLineDerivativesInterpolation.y(sNext),obj.track.centerLineDerivativesInterpolation.x(sNext)));
+                phiTrack = full(atan2(obj.track.centerLineDerivativesInterpolation.y(s0),obj.track.centerLineDerivativesInterpolation.x(s0)));
 
-                obj.ocp.set('p',[xCenter;yCenter;xRef;yRef;thetaRef],i);
+                obj.ocp.set('p',[xTrack;yTrack;phiTrack;s0],i-1);
+                obj.paramVec(:,i) = [xTrack;yTrack;phiTrack;s0];
             end            
         end
 
@@ -376,6 +377,55 @@ classdef Acados < handle
             k4 = obj.f(state + obj.ts * k3, input);
             % combining to give output
             xNext = state + obj.ts * (k1 / 6.0 + k2 / 3.0 + k3 / 3.0 + k4 / 6.0);
+        end
+
+        function [cost_expr_ext_cost,cost_expr_ext_cost_e] = computeCost(obj)
+            % Coeffs for control inputs penalization
+            R = diag([obj.parameters.costs.rThrottle, ...
+                      obj.parameters.costs.rSteeringAngle, ...
+                      obj.parameters.costs.rBrakes, ...
+                      obj.parameters.costs.rVs]);
+            
+            cost_expr_ext_cost = 0;
+
+            % stages cost
+            for i = 1:obj.config.N
+                inputVec = obj.initialControlGuess(:,i);
+                cost_expr_ext_cost = cost_expr_ext_cost + obj.costWOControl(i) + inputVec'*R*inputVec;
+            end
+
+            % terminal cost
+            cost_expr_ext_cost_e = obj.costWOControl(obj.config.N+1);
+        end
+
+        function cost = costWOControl(obj,i)
+            % Coeffs for laf and contouring errors penallization
+            Q = diag([obj.parameters.costs.qC, ...
+                      obj.parameters.costs.qL]);
+        
+            q = obj.parameters.costs.qVs;
+
+            xTrack = obj.paramVec(1,i);
+            yTrack = obj.paramVec(2,i);
+            phiTrack = obj.paramVec(3,i);
+            s0 = obj.paramVec(4,i);
+
+            x = obj.initialStateGuess(1,i);
+            y = obj.initialStateGuess(2,i);
+            s = obj.initialStateGuess(7,i);
+            vs = obj.initialStateGuess(11,i);
+
+            xRef = xTrack + (s-s0)*cos(phiTrack);
+            yRef = yTrack + (s-s0)*sin(phiTrack);
+
+            % contouring error
+            ec = -cos(phiTrack)*(yRef-y)+sin(phiTrack)*(xRef-x);
+            % lag error
+            el = cos(phiTrack)*(xRef-x)+sin(phiTrack)*(yRef-y);
+           
+            error = [ec;el];
+
+            cost = error'*Q*error + q*vs;
         end
     end
 end

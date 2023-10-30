@@ -58,8 +58,12 @@ trackCenter = mpc.getTrack().getPath();
 trackPath = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
-phi0 = atan2(trackPath.y(11) - trackPath.y(10),trackPath.x(11) - trackPath.x(10));
-x0 = [trackPath.x(10);trackPath.y(10);phi0;5;0;0;0;0;0;0;0];
+% initial point
+
+point0 = 10;
+
+phi0 = atan2(trackPath.y(point0+1) - trackPath.y(point0),trackPath.x(point0+1) - trackPath.x(point0));
+x0 = [trackPath.x(point0);trackPath.y(point0);phi0;5;0;0;0;0;0;0;5];
 
 mpc.initMPC(x0);
 

@@ -43,13 +43,12 @@ function model = getModel(parameters)
     z = [];
 
     % parameters
-    xCen = SX.sym('xCen');
-    yCen = SX.sym('yCen');
-    xRef = SX.sym('xRef');
-    yRef = SX.sym('yRef');
-    thetaRef = SX.sym('thetaRef');
+    xTrack = SX.sym('xTrack');
+    yTrack = SX.sym('yTrack');
+    phiTrack = SX.sym('phiTrack');
+    s0 = SX.sym('s0');
 
-    p = [xCen;yCen;xRef;yRef;thetaRef];
+    p = [xTrack;yTrack;phiTrack;s0];
     
     % dynamics
     carModel = Model(parameters.car,parameters.tire);
@@ -60,13 +59,14 @@ function model = getModel(parameters)
     f = Function('f',{state,input},{f_expl});
 
     % cost
+
+    xRef = xTrack + (s-s0)*cos(phiTrack);
+    yRef = yTrack + (s-s0)*sin(phiTrack);
     % contouring error
-    ec = -sin(thetaRef) * (xRef - x)...
-                            + cos(thetaRef) * (yRef - y);
+    ec = -cos(phiTrack)*(yRef-y)+sin(phiTrack)*(xRef-x);
     % lag error
-    el = cos(thetaRef) * (xRef - x)...
-                            + sin(thetaRef) * (yRef - y);
-    
+    el = cos(phiTrack)*(xRef-x)+sin(phiTrack)*(yRef-y);
+   
     error = [ec;el];
 
     % Coeffs for laf and contouring errors penallization
@@ -81,8 +81,8 @@ function model = getModel(parameters)
               parameters.costs.rBrakes, ...
               parameters.costs.rVs]);
 
-    cost_expr_ext_cost = error' * Q * error + input'*R*input - q*vs;
-    cost_expr_ext_cost_e = [0;0]' * Q * [0;0] - q*0;
+    cost_expr_ext_cost = error'*Q*error+input'*R*input-q*vs;
+    cost_expr_ext_cost_e = error' *Q*error - q*vs;
 
     % constraints 
     lf = parameters.car.lf;
@@ -92,7 +92,7 @@ function model = getModel(parameters)
 
     % track constraint
     constr_expr_h = [constr_expr_h;
-                     (x-xCen)^2 + (y-yCen)^2];
+                     (x-xTrack)^2 + (y-yTrack)^2];
 
     % front slip angle constraint
     %constr_expr_h = [constr_expr_h;
