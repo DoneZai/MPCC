@@ -1,6 +1,6 @@
 function config = config()
     config.solver = 'acados'; % ipopt, hpipm, acados
-    config.simulator = 'kinematic'; % kinematic, simple_dynamic, dynamic
+    config.simulator = 'dynamic'; % kinematic, simple_dynamic, dynamic
     config.NX = 11;
     config.NU  = 4;
     
@@ -8,7 +8,7 @@ function config = config()
     config.NPC = 3;  % number of polytopic constraints (2 for hpipm and 3 for ipopt and acados)
     config.NS = 3; % number of softened constraints (2 for hpipm and 3 for ipopt and acados)
 
-    config.N = 40;
+    config.N = 100;
     config.NSpline = 5000;
 
     config.siIndex = struct('x',1, ...

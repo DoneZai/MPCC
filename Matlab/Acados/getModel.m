@@ -52,8 +52,8 @@ function model = getModel(parameters)
     
     % dynamics
     carModel = Model(parameters.car,parameters.tire);
-    %f_expl = carModel.initSimpleCombinedModel(state,input);
-    f_expl = carModel.initKinematicModel(state,input);
+    f_expl = carModel.initSimpleCombinedModel(state,input);
+    %f_expl = carModel.initKinematicModel(state,input);
     f_impl = f_expl - xdot;
 
     f = Function('f',{state,input},{f_expl});
@@ -81,8 +81,8 @@ function model = getModel(parameters)
               parameters.costs.rBrakes, ...
               parameters.costs.rVs]);
 
-    cost_expr_ext_cost = error'*Q*error+input'*R*input-q*vs;
-    cost_expr_ext_cost_e = error' *Q*error - q*vs;
+    cost_expr_ext_cost = error'*Q*error+input'*R*input+q*(15-vs)^2;
+    cost_expr_ext_cost_e = error'*Q*error+q*(15-vs)^2;
 
     % constraints 
     lf = parameters.car.lf;
@@ -91,16 +91,14 @@ function model = getModel(parameters)
     constr_expr_h = [];
 
     % track constraint
-    constr_expr_h = [constr_expr_h;
-                     (x-xTrack)^2 + (y-yTrack)^2];
+    %constr_expr_h = [constr_expr_h;
+    %                 (x-xRef)^2 + (y-yRef)^2];
 
     % front slip angle constraint
-    %constr_expr_h = [constr_expr_h;
-    %                 atan2((vy + r*lf),vx) - steeringAngle];
+    constr_expr_h = [constr_expr_h;atan2((vy + r*lf),vx) - steeringAngle];
 
     % rear slip angle constraint
-    %constr_expr_h = [constr_expr_h;
-    %                 atan2((vy - r*lr),vx)];
+    constr_expr_h = [constr_expr_h;atan2((vy - r*lr),vx)];
 
     % model filling
     model.f_expl_expr = f_expl;

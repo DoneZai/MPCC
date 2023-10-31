@@ -123,7 +123,7 @@ classdef Acados < handle
             obj.ocpModel.set('cost_expr_ext_cost',model.cost_expr_ext_cost);
             obj.ocpModel.set('cost_expr_ext_cost_e',model.cost_expr_ext_cost_e);
 
-            %obj.ocpModel.set('constr_expr_h',model.constr_expr_h);
+            obj.ocpModel.set('constr_expr_h',model.constr_expr_h);
 
             obj.f = model.f;
         end
@@ -144,21 +144,21 @@ classdef Acados < handle
 
             obj.ocpModel.set('constr_lbx',[ ...
                                             -2*pi, ...
-                                            1.0, ...
+                                            obj.parameters.bounds.lowerStateBounds.vxL, ...
                                             0, ...
                                             obj.parameters.bounds.lowerStateBounds.throttleL, ...
                                             obj.parameters.bounds.lowerStateBounds.steeringAngleL, ...
                                             obj.parameters.bounds.lowerStateBounds.brakesL, ...
-                                            0]);
+                                            obj.parameters.bounds.lowerStateBounds.vsL]);
 
             obj.ocpModel.set('constr_ubx',[ ...
                                             2*pi, ...
-                                            6, ...
+                                            obj.parameters.bounds.upperStateBounds.vxU, ...
                                             10e8, ...
                                             obj.parameters.bounds.upperStateBounds.throttleU, ...
                                             obj.parameters.bounds.upperStateBounds.steeringAngleU, ...
                                             obj.parameters.bounds.upperStateBounds.brakesU, ...
-                                            6]);
+                                            obj.parameters.bounds.upperStateBounds.vsU]);
 
             nbu = 4;
             jbu = zeros(nbu,obj.config.NU);
@@ -183,8 +183,8 @@ classdef Acados < handle
                                             obj.parameters.bounds.upperInputBounds.dVsU]);
 
             % track, front slip angle, rear slip angle constraints
-            %constr_lh = [];
-            %constr_uh = [];
+            constr_lh = [];
+            constr_uh = [];
 
             % track constraint bounds
             %constr_lh = [constr_lh,0];
@@ -192,17 +192,17 @@ classdef Acados < handle
             %constr_uh = [constr_uh,obj.parameters.mpcModel.rOut^2];
 
             % front slip angle constraint
-            %constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
+            constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
             %
-            %constr_uh = [constr_uh,obj.parameters.mpcModel.maxAlpha];
+            constr_uh = [constr_uh,obj.parameters.mpcModel.maxAlpha];
 
             % rear slip angle constraint
-            %constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
+            constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
             %
-            %constr_uh = [constr_uh,obj.parameters.mpcModel.maxAlpha];
+            constr_uh = [constr_uh,obj.parameters.mpcModel.maxAlpha];
            
-            %obj.ocpModel.set('constr_lh',constr_lh);
-            %obj.ocpModel.set('constr_uh',constr_uh);
+            obj.ocpModel.set('constr_lh',constr_lh);
+            obj.ocpModel.set('constr_uh',constr_uh);
 
             % Coeffs for soft constraints penalization
             % quadratic part
@@ -210,16 +210,24 @@ classdef Acados < handle
             %% linear part
             %z = [obj.parameters.costs.scLinTrack; obj.parameters.costs.scLinAlpha; obj.parameters.costs.scLinAlpha];
             %jsh = eye(obj.config.NS); % all constraints are softened
-
+            
+            % Coeffs for track onyl 
             %Z = diag([obj.parameters.costs.scQuadTrack]);
             % linear part
             %z = [obj.parameters.costs.scLinTrack];
 
             %jsh = eye(1); % all constraints are softened
             
-            %obj.ocpModel.set('constr_Jsh',jsh);
-            %obj.ocpModel.set('cost_Z',Z);
-            %obj.ocpModel.set('cost_z',z);
+            % Coeffs for slip angles only
+            Z = diag([obj.parameters.costs.scQuadAlpha, obj.parameters.costs.scQuadAlpha]);
+            % linear part
+            z = [obj.parameters.costs.scLinAlpha; obj.parameters.costs.scLinAlpha];
+
+            jsh = eye(2); % all constraints are softened
+            
+            obj.ocpModel.set('constr_Jsh',jsh);
+            obj.ocpModel.set('cost_Z',Z);
+            obj.ocpModel.set('cost_z',z);
         end
 
         function setOCPOpts(obj)
@@ -271,6 +279,7 @@ classdef Acados < handle
             status = obj.ocp.get('status');
 
             if status ~= 0
+                disp(obj.ocp.get_cost);
                 error('acados returned status %d in closed loop iteration %d. Exiting.', status);
             end
 
@@ -425,7 +434,7 @@ classdef Acados < handle
            
             error = [ec;el];
 
-            cost = error'*Q*error + q*vs;
+            cost = error'*Q*error + q*(15-vs)^2;
         end
     end
 end

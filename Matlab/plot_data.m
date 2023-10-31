@@ -13,6 +13,8 @@
     %% frontSa, rearSa and steeringAngle
     figure(2);
     hold on;
+
+    stateVec = getStateVec(log);
     
     frontSaVec = zeros(1,length(log));
     rearSaVec = zeros(1,length(log));
@@ -31,6 +33,8 @@
     figure(3);
     hold on;
 
+    stateVec = getStateVec(log);
+
     plot(1:length(log), stateVec(8,:));
     plot(1:length(log), stateVec(9,:));
     plot(1:length(log), stateVec(10,:));
@@ -40,12 +44,16 @@
     figure(4);
     hold on;
 
+    stateVec = getStateVec(log);
+
     plot(1:length(log), stateVec(7,:));
     plot(1:length(log), stateVec(11,:));
     legend('s','vs');
 
     %% vs(s)
     figure(5)
+
+    stateVec = getStateVec(log);
 
     plot(stateVec(7,:),stateVec(11,:));
     legend('vs');
@@ -67,12 +75,16 @@
     %% steeringAngle
     figure(7);
 
+    stateVec = getStateVec(log);
+
     plot(1:length(log),stateVec(9,:));
     legend('steeringAngle');
 
     %% vx vy r throttle steeringAngle brakes
     figure(8)
     hold on;
+
+    stateVec = getStateVec(log);
   
     plot(1:length(log),stateVec(4,:));
     plot(1:length(log),stateVec(5,:));
