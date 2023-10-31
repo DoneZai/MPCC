@@ -110,25 +110,25 @@ classdef Ipopt < handle
             import casadi.*;
 
             % States
-            x = MX.sym('x');
-            y = MX.sym('y');
-            yaw = MX.sym('yaw');
-            vx = MX.sym('vx');
-            vy = MX.sym('vy');
-            r = MX.sym('r');
-            s = MX.sym('s');
-            throttle = MX.sym('throttle');
-            steeringAngle = MX.sym('steeringAngle');
-            brakes = MX.sym('brakes');
-            vs = MX.sym('vs');
+            x = SX.sym('x');
+            y = SX.sym('y');
+            yaw = SX.sym('yaw');
+            vx = SX.sym('vx');
+            vy = SX.sym('vy');
+            r = SX.sym('r');
+            s = SX.sym('s');
+            throttle = SX.sym('throttle');
+            steeringAngle = SX.sym('steeringAngle');
+            brakes = SX.sym('brakes');
+            vs = SX.sym('vs');
             
             states = [x;y;yaw;vx;vy;r;s;throttle;steeringAngle;brakes;vs];
             
             % Controls
-            dThrottle = MX.sym('dThrottle');
-            dSteeringAngle = MX.sym('dSteeringAngle');
-            dBrakes = MX.sym('dBrakes');
-            dVs = MX.sym('dVs');
+            dThrottle = SX.sym('dThrottle');
+            dSteeringAngle = SX.sym('dSteeringAngle');
+            dBrakes = SX.sym('dBrakes');
+            dVs = SX.sym('dVs');
 
             controls = [dThrottle,dSteeringAngle,dBrakes,dVs];
 
@@ -137,12 +137,12 @@ classdef Ipopt < handle
 
             obj.f = Function('f',{states,controls},{rhs});
             
-            obj.U = MX.sym('U',obj.config.NU,obj.config.N);
-            obj.P = MX.sym('P',obj.config.NX + 2*(obj.config.N+1),1); % NX - initial state, 2*(obj.config.N+1) - track center coordinates
+            obj.U = SX.sym('U',obj.config.NU,obj.config.N);
+            obj.P = SX.sym('P',obj.config.NX + 4*(obj.config.N+1),1); % NX - initial state, 4*(obj.config.N+1) - [xTrack,yTrack,phiTrack,s0]
             %obj.P = MX.sym('P',obj.config.NX,1); % NX - initial state
-            obj.X = MX.sym('X',obj.config.NX,(obj.config.N+1));
+            obj.X = SX.sym('X',obj.config.NX,(obj.config.N+1));
             % slack variables matrix for soft constraints
-            obj.S = MX.sym('S',obj.config.NS,(obj.config.N+1));
+            obj.S = SX.sym('S',obj.config.NS,(obj.config.N+1));
             
             % objective function
             obj.objective = 0;
@@ -204,11 +204,20 @@ classdef Ipopt < handle
 
                 x = obj.X(1,i);
                 y = obj.X(2,i);
+                s = obj.X(7,i);
 
-                xCenter = obj.P(obj.config.NX+2*i-1,1);
-                yCenter = obj.P(obj.config.NX+2*i,1);
+                params = obj.P(obj.config.NX+4*(i-1)+1:obj.config.NX+4*i);
+
+                xTrack = params(1);
+                yTrack = params(2);
+                phiTrack = params(3);
+                s0 = params(4);
+
+                xRef = xTrack + cos(phiTrack)*(s-s0);
+                yRef = yTrack + sin(phiTrack)*(s-s0);
+
                 % track constraint: 0.0 <= (X - Xcen(S))^2 + (Y - Ycen(S))^2 <= rOut
-                obj.g = [obj.g;(x-xCenter)^2 + (y-yCenter)^2 + obj.S(1,i)];
+                obj.g = [obj.g;(x-xRef)^2 + (y-yRef)^2 + obj.S(1,i)];
 
                 % objective function with slack vars
                 obj.objective = obj.objective + obj.Z(1,1) * obj.S(1,i)^2;
@@ -272,31 +281,44 @@ classdef Ipopt < handle
         end
 
         function initCostFunction(obj)
+            % stages cost
             for i = 1:obj.config.N
-                stateNext = obj.X(:,i+1);
                 control = obj.U(:,i);
-                
-                x = stateNext(1);
-                y = stateNext(2);
-                s = stateNext(7);
-                vs = stateNext(11);
-                
-                xRef = obj.track.centerLineInterpolation.x(s);
-                yRef = obj.track.centerLineInterpolation.y(s);
-                thetaRef = atan2(obj.track.centerLineDerivativesInterpolation.y(s),obj.track.centerLineDerivativesInterpolation.x(s));
-                
-                % contouring error
-                ec = -sin(thetaRef) * (xRef - x)...
-                                    + cos(thetaRef) * (yRef - y);
-                % lag error
-                el = cos(thetaRef) * (xRef - x)...
-                                    + sin(thetaRef) * (yRef - y);
-                error = [ec;el];
-                
+
                 % objective function
-                obj.objective = obj.objective + error' * obj.Q * error + ...
-                    control' * obj.R * control - obj.parameters.costs.qVs * vs;
-            end 
+                obj.objective = obj.objective+obj.stageCostWOControl(i)+control'*obj.R*control;
+            end
+
+            % terminal cost
+            obj.objective = obj.objective+obj.stageCostWOControl(obj.config.N+1);
+        end
+
+        function cost = stageCostWOControl(obj,i)
+            state = obj.X(:,i);
+            params = obj.P(obj.config.NX+4*(i-1)+1:obj.config.NX+4*i);
+
+            x = state(1);
+            y = state(2);
+            s = state(7);
+            vs = state(11);
+
+            xTrack = params(1);
+            yTrack = params(2);
+            phiTrack = params(3);
+            s0 = params(4);
+
+            xRef = xTrack + cos(phiTrack)*(s-s0);
+            yRef = yTrack + sin(phiTrack)*(s-s0);
+            
+            % contouring error
+            ec = -sin(phiTrack) * (xRef - x)...
+                                + cos(phiTrack) * (yRef - y);
+            % lag error
+            el = cos(phiTrack) * (xRef - x)...
+                                + sin(phiTrack) * (yRef - y);
+            error = [ec;el];
+
+            cost = error'*obj.Q*error - obj.parameters.costs.qVs * vs;
         end
 
         function initIpoptSolver(obj)
@@ -544,11 +566,16 @@ classdef Ipopt < handle
 
         function fillTrackCenterCoordinates(obj)
             for i = 1:obj.config.N+1
-                s = obj.initialStateGuess(7,i);
-                xCenter = full(obj.track.centerLineInterpolation.x(s));
-                yCenter = full(obj.track.centerLineInterpolation.y(s));
-                obj.args.p(obj.config.NX+2*i-1,1) = xCenter;
-                obj.args.p(obj.config.NX+2*i,1) = yCenter;
+                
+                s0 = obj.initialStateGuess(7,i);
+                xTrack = full(obj.track.centerLineInterpolation.x(s0));
+                yTrack = full(obj.track.centerLineInterpolation.y(s0));
+                phiTrack = full(atan2(obj.track.centerLineDerivativesInterpolation.y(s0),obj.track.centerLineDerivativesInterpolation.x(s0)));
+     
+                obj.args.p(obj.config.NX+4*i-3,1) = xTrack;
+                obj.args.p(obj.config.NX+4*i-2,1) = yTrack;
+                obj.args.p(obj.config.NX+4*i-1,1) = phiTrack;
+                obj.args.p(obj.config.NX+4*i,1) = s0;
             end            
         end
 
