@@ -129,32 +129,38 @@ classdef Acados < handle
         end
 
         function setBounds(obj)
-            nbx = 7;
+            nbx = 9;
             jbx = zeros(nbx,obj.config.NX);
 
             jbx(1,3) = 1;
             jbx(2,4) = 1;
-            jbx(3,7) = 1;
-            jbx(4,8) = 1;
-            jbx(5,9) = 1;
-            jbx(6,10) = 1;
-            jbx(7,11) = 1;
+            jbx(3,5) = 1;
+            jbx(4,6) = 1;
+            jbx(5,7) = 1;
+            jbx(6,8) = 1;
+            jbx(7,9) = 1;
+            jbx(8,10) = 1;
+            jbx(9,11) = 1;
 
             obj.ocpModel.set('constr_Jbx',jbx);
 
             obj.ocpModel.set('constr_lbx',[ ...
-                                            -2*pi, ...
+                                            obj.parameters.bounds.lowerStateBounds.yawL, ...
                                             obj.parameters.bounds.lowerStateBounds.vxL, ...
-                                            0, ...
+                                            obj.parameters.bounds.lowerStateBounds.vyL, ...
+                                            obj.parameters.bounds.lowerStateBounds.rL, ...
+                                            obj.parameters.bounds.lowerStateBounds.sL, ...
                                             obj.parameters.bounds.lowerStateBounds.throttleL, ...
                                             obj.parameters.bounds.lowerStateBounds.steeringAngleL, ...
                                             obj.parameters.bounds.lowerStateBounds.brakesL, ...
                                             obj.parameters.bounds.lowerStateBounds.vsL]);
 
             obj.ocpModel.set('constr_ubx',[ ...
-                                            2*pi, ...
+                                            obj.parameters.bounds.upperStateBounds.yawU, ...
                                             obj.parameters.bounds.upperStateBounds.vxU, ...
-                                            10e8, ...
+                                            obj.parameters.bounds.upperStateBounds.vyU, ...
+                                            obj.parameters.bounds.upperStateBounds.rU, ...
+                                            obj.parameters.bounds.upperStateBounds.sU, ...
                                             obj.parameters.bounds.upperStateBounds.throttleU, ...
                                             obj.parameters.bounds.upperStateBounds.steeringAngleU, ...
                                             obj.parameters.bounds.upperStateBounds.brakesU, ...
@@ -278,22 +284,37 @@ classdef Acados < handle
 
             status = obj.ocp.get('status');
 
+            disp(obj.ocp.get_cost);
+            disp(obj.ocp.get('sl',obj.config.N-1));
+            disp(obj.ocp.get('su',obj.config.N-1));
+
+
             if status ~= 0
-                disp(obj.ocp.get_cost);
                 error('acados returned status %d in closed loop iteration %d. Exiting.', status);
             end
 
             obj.initialStateGuess = obj.ocp.get('x');
             obj.initialControlGuess = obj.ocp.get('u');
 
-            [cost_expr_ext_cost,cost_expr_ext_cost_e] = obj.computeCost();
-            ocpCost = obj.ocp.get_cost;
+            %[cost_expr_ext_cost,cost_expr_ext_cost_e] = obj.computeCost();
+            %ocpCost = obj.ocp.get_cost;
 
             sol = MpcReturn;
 
             sol.x0 = obj.initialStateGuess(:,1);
             sol.u0 = obj.initialControlGuess(:,1);
-            sol.mpcHorizon = obj.initialStateGuess;
+            sol.mpcHorizon.states = obj.initialStateGuess;
+            sol.mpcHorizon.inputs = obj.initialControlGuess;
+            sol.mpcHorizon.slacks = obj.getSlacks();
+        end
+
+        function slacks = getSlacks(obj)
+            slacks.upper = zeros(obj.config.NS,obj.config.N+1);
+            slacks.lower = zeros(obj.config.NS,obj.config.N+1);
+            for i = 1:obj.config.N
+                slacks.upper(:,i) = obj.ocp.get('su',i-1);
+                slacks.lower(:,i) = obj.ocp.get('sl',i-1);
+            end
         end
 
         function fillParametersVector(obj)

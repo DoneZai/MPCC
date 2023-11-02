@@ -1,0 +1,23 @@
+function carPositions(obj)
+    f = figure(1);
+    f.Name = 'carPositions';
+    f.NumberTitle = 'off';
+
+    hold on;
+
+    plot(obj.track.xOuter,obj.track.yOuter,'b');
+    plot(obj.track.xInner,obj.track.yInner,'y');
+    plot(obj.track.x,obj.track.y,'r');
+
+    states = zeros(obj.config.NX,obj.config.N+1,length(obj.log));
+
+    for i = 1:length(obj.log)
+        states(:,:,i) = obj.log(i).mpcHorizon.states;
+    end
+
+    for i = 1:length(obj.log)
+        plot(states(1,:,i),states(2,:,i));
+    end
+
+end
+
