@@ -15,3 +15,10 @@ plotObj.boundedStates();
 %% Plot bounded inputs on all horizons
 plotObj = Plot(config,parameters,track,log);
 plotObj.boundedInputs();
+
+%% Plot race
+plotObj = Plot(config,parameters,track,log);
+plotObj.race();
+%% Plot ax, ay
+plotObj = Plot(config,parameters,track,log);
+plotObj.accelerationsDistribution();

@@ -24,6 +24,10 @@ classdef Plot < handle
         
         boundedInputs(obj) % plot input vector on all horizons from log
 
+        race(obj) % plot the race
+
+        accelerationsDistribution(obj) % plot accelerations distribution
+
         function stateVec = getStateVec(obj)
             stateVec = zeros(length(obj.log(1).x0),length(obj.log));
             for i = 1:length(obj.log)
