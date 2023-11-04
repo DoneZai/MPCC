@@ -290,14 +290,11 @@ classdef Acados < handle
 
 
             if status ~= 0
-                error('acados returned status %d in closed loop iteration %d. Exiting.', status);
+               error('acados returned status %d in closed loop iteration %d. Exiting.', status);
             end
 
             obj.initialStateGuess = obj.ocp.get('x');
             obj.initialControlGuess = obj.ocp.get('u');
-
-            %[cost_expr_ext_cost,cost_expr_ext_cost_e] = obj.computeCost();
-            %ocpCost = obj.ocp.get_cost;
 
             sol = MpcReturn;
 
@@ -306,6 +303,7 @@ classdef Acados < handle
             sol.mpcHorizon.states = obj.initialStateGuess;
             sol.mpcHorizon.inputs = obj.initialControlGuess;
             sol.mpcHorizon.slacks = obj.getSlacks();
+            sol.solverStatus = status;
         end
 
         function slacks = getSlacks(obj)
