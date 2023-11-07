@@ -70,10 +70,9 @@ function model = getModel(parameters)
     error = [ec;el];
 
     % Coeffs for laf and contouring errors penallization
-    Q = diag([parameters.costs.qC, ...
-              parameters.costs.qL]);
+    Q = diag([parameters.costs.qC,parameters.costs.qL]);
 
-    q = parameters.costs.qVs;
+    qVs = parameters.costs.qVs;
 
     % Coeffs for control inputs penalization
     R = diag([parameters.costs.rThrottle, ...
@@ -81,8 +80,8 @@ function model = getModel(parameters)
               parameters.costs.rBrakes, ...
               parameters.costs.rVs]);
 
-    cost_expr_ext_cost = error'*Q*error+input'*R*input+q*(15-vs)^2;
-    cost_expr_ext_cost_e = error'*Q*error+q*(15-vs)^2;
+    cost_expr_ext_cost = error'*Q*error+input'*R*input+qVs*(15-vs)^2;
+    cost_expr_ext_cost_e = error'*Q*error+qVs*(15-vs)^2;
 
     % constraints 
     lf = parameters.car.lf;

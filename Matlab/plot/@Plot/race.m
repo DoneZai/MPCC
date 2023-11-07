@@ -26,8 +26,6 @@ function race(obj)
         circlesCenters(:,:,i) = obj.log(i).circlesCenters(:,:);
     end
 
-    plot(states(1,:),states(2,:),"green");
-
     for i = 1:length(obj.log)
         carBox = plotCarBox(states(:,i),obj.parameters.mpcModel.carW,obj.parameters.mpcModel.carL);
         horizonPositions = plotHorizonPositions(horizonsPositions(:,:,i));
@@ -38,6 +36,8 @@ function race(obj)
         delete(horizonPositions);
         delete(circles);
     end
+
+    plot(states(1,:),states(2,:),"green");
 end
 
 
