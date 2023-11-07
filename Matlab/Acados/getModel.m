@@ -99,7 +99,7 @@ function model = getModel(parameters)
     constr_expr_h = [constr_expr_h;(atan2((vy - r*lr),vx))*lambda];
 
     % track constraint
-    constr_expr_h = [constr_expr_h;(x-xRef)^2 + (y-yRef)^2];
+    constr_expr_h = [constr_expr_h;(x-xTrack)^2 + (y-yTrack)^2];
 
     % model filling
     model.f_expl_expr = f_expl;

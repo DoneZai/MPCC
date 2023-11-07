@@ -274,8 +274,6 @@ classdef Acados < handle
             obj.fillParametersVector();
             
             obj.ocp.set('constr_x0', obj.initialStateGuess(:,1))
-            %obj.ocp.set('constr_lbx', obj.initialStateGuess(:,1), 0);
-            %obj.ocp.set('constr_ubx', obj.initialStateGuess(:,1), 0);
 
             obj.ocp.set('init_x', obj.initialStateGuess);
             obj.ocp.set('init_u', obj.initialControlGuess);
@@ -307,11 +305,14 @@ classdef Acados < handle
                 
                 xTrack = obj.paramVec(1,i);
                 yTrack = obj.paramVec(2,i);
-                phiTrack = obj.paramVec(3,i);
-                s0 = obj.paramVec(4,i);
+                %phiTrack = obj.paramVec(3,i);
+                %s0 = obj.paramVec(4,i);
 
-                centers(1,i) = xTrack + (newStateGuess(7,i)-s0)*cos(phiTrack);
-                centers(2,i) = yTrack + (newStateGuess(7,i)-s0)*sin(phiTrack);
+                %centers(1,i) = xTrack + (newStateGuess(7,i)-s0)*cos(phiTrack);
+                %centers(2,i) = yTrack + (newStateGuess(7,i)-s0)*sin(phiTrack);
+
+                centers(1,i) = xTrack;
+                centers(2,i) = yTrack;
             end
         end
 
