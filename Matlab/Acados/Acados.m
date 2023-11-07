@@ -192,11 +192,6 @@ classdef Acados < handle
             constr_lh = [];
             constr_uh = [];
 
-            % track constraint bounds
-            %constr_lh = [constr_lh,0];
-            
-            %constr_uh = [constr_uh,obj.parameters.mpcModel.rOut^2];
-
             % front slip angle constraint
             constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
             %
@@ -206,16 +201,22 @@ classdef Acados < handle
             constr_lh = [constr_lh,-obj.parameters.mpcModel.maxAlpha];
             %
             constr_uh = [constr_uh,obj.parameters.mpcModel.maxAlpha];
+
+            % track constraint bounds
+            constr_lh = [constr_lh,0];
+            
+            constr_uh = [constr_uh,obj.parameters.mpcModel.rOut^2];
            
             obj.ocpModel.set('constr_lh',constr_lh);
             obj.ocpModel.set('constr_uh',constr_uh);
 
             % Coeffs for soft constraints penalization
             % quadratic part
-            %Z = diag([obj.parameters.costs.scQuadTrack, obj.parameters.costs.scQuadAlpha, obj.parameters.costs.scQuadAlpha]);
-            %% linear part
-            %z = [obj.parameters.costs.scLinTrack; obj.parameters.costs.scLinAlpha; obj.parameters.costs.scLinAlpha];
-            %jsh = eye(obj.config.NS); % all constraints are softened
+            Z = diag([obj.parameters.costs.scQuadAlpha, obj.parameters.costs.scQuadAlpha, obj.parameters.costs.scQuadTrack]);
+            % linear part
+            z = [obj.parameters.costs.scLinAlpha; obj.parameters.costs.scLinAlpha; obj.parameters.costs.scLinTrack];
+            
+            jsh = eye(obj.config.NS); % all constraints are softened
             
             % Coeffs for track onyl 
             %Z = diag([obj.parameters.costs.scQuadTrack]);
@@ -225,11 +226,11 @@ classdef Acados < handle
             %jsh = eye(1); % all constraints are softened
             
             % Coeffs for slip angles only
-            Z = diag([obj.parameters.costs.scQuadAlpha, obj.parameters.costs.scQuadAlpha]);
+            %Z = diag([obj.parameters.costs.scQuadAlpha, obj.parameters.costs.scQuadAlpha]);
             % linear part
-            z = [obj.parameters.costs.scLinAlpha; obj.parameters.costs.scLinAlpha];
+            %z = [obj.parameters.costs.scLinAlpha; obj.parameters.costs.scLinAlpha];
 
-            jsh = eye(2); % all constraints are softened
+            %jsh = eye(2); % all constraints are softened
             
             obj.ocpModel.set('constr_Jsh',jsh);
             obj.ocpModel.set('cost_Z',Z);
@@ -284,15 +285,6 @@ classdef Acados < handle
 
             status = obj.ocp.get('status');
 
-            disp(obj.ocp.get_cost);
-            disp(obj.ocp.get('sl',obj.config.N-1));
-            disp(obj.ocp.get('su',obj.config.N-1));
-
-
-            if status ~= 0
-               error('acados returned status %d in closed loop iteration %d. Exiting.', status);
-            end
-
             obj.initialStateGuess = obj.ocp.get('x');
             obj.initialControlGuess = obj.ocp.get('u');
 
@@ -304,11 +296,28 @@ classdef Acados < handle
             sol.mpcHorizon.inputs = obj.initialControlGuess;
             sol.mpcHorizon.slacks = obj.getSlacks();
             sol.solverStatus = status;
+            sol.cost = obj.ocp.get_cost;
+            sol.circlesCenters = obj.getConstraintsCirclesCenters();
+        end
+
+        function centers = getConstraintsCirclesCenters(obj)
+            centers = zeros(2,obj.config.N+1);
+            newStateGuess = obj.ocp.get('x');
+            for i = 1:obj.config.N+1
+                
+                xTrack = obj.paramVec(1,i);
+                yTrack = obj.paramVec(2,i);
+                phiTrack = obj.paramVec(3,i);
+                s0 = obj.paramVec(4,i);
+
+                centers(1,i) = xTrack + (newStateGuess(7,i)-s0)*cos(phiTrack);
+                centers(2,i) = yTrack + (newStateGuess(7,i)-s0)*sin(phiTrack);
+            end
         end
 
         function slacks = getSlacks(obj)
-            slacks.upper = zeros(obj.config.NS,obj.config.N+1);
-            slacks.lower = zeros(obj.config.NS,obj.config.N+1);
+            slacks.upper = zeros(obj.config.NS,obj.config.N);
+            slacks.lower = zeros(obj.config.NS,obj.config.N);
             for i = 1:obj.config.N
                 slacks.upper(:,i) = obj.ocp.get('su',i-1);
                 slacks.lower(:,i) = obj.ocp.get('sl',i-1);
@@ -356,8 +365,8 @@ classdef Acados < handle
             obj.initialControlGuess = zeros(obj.config.NU,obj.config.N);
 
             obj.initialStateGuess(:,1) = x0;
-            obj.initialStateGuess(obj.config.siIndex.vx,2:obj.config.N+1) = x0(4);
-            obj.initialStateGuess(obj.config.siIndex.vs,1:obj.config.N+1) = x0(4);
+            obj.initialStateGuess(obj.config.siIndex.vx,1:obj.config.N+1) = max(x0(4),obj.parameters.mpcModel.initialVelocity);
+            obj.initialStateGuess(obj.config.siIndex.vs,1:obj.config.N+1) = max(x0(4),obj.parameters.mpcModel.initialVelocity);
 
             for i = 2:obj.config.N+1
               obj.initialStateGuess(obj.config.siIndex.s,i) =...

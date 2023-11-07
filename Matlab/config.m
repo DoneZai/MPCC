@@ -6,7 +6,7 @@ function config = config()
     
     config.NB = 11;  % max number of bounds
     config.NPC = 2;  % number of polytopic constraints (2 for hpipm and 3 for ipopt and acados)
-    config.NS = 2; % number of softened constraints (2 for hpipm and 3 for ipopt and acados)
+    config.NS = 3; % number of softened constraints (2 for hpipm and 3 for ipopt and acados)
 
     config.N = 100;
     config.NSpline = 5000;

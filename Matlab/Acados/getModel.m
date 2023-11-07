@@ -90,15 +90,16 @@ function model = getModel(parameters)
     
     constr_expr_h = [];
 
-    % track constraint
-    %constr_expr_h = [constr_expr_h;
-    %                 (x-xRef)^2 + (y-yRef)^2];
+    lambda = min(max((vx - 3)/2,0),1);
 
     % front slip angle constraint
-    constr_expr_h = [constr_expr_h;atan2((vy + r*lf),vx) - steeringAngle];
+    constr_expr_h = [constr_expr_h;(atan2((vy + r*lf),vx) - steeringAngle)*lambda];
 
     % rear slip angle constraint
-    constr_expr_h = [constr_expr_h;atan2((vy - r*lr),vx)];
+    constr_expr_h = [constr_expr_h;(atan2((vy - r*lr),vx))*lambda];
+
+    % track constraint
+    constr_expr_h = [constr_expr_h;(x-xRef)^2 + (y-yRef)^2];
 
     % model filling
     model.f_expl_expr = f_expl;

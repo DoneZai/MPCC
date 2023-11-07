@@ -16,7 +16,7 @@ function carPositions(obj)
     end
 
     for i = 1:length(obj.log)
-        plot(states(1,:,i),states(2,:,i));
+        plot(states(1,1:obj.config.N-10,i),states(2,1:obj.config.N-10,i));
     end
 
 end

@@ -20,15 +20,23 @@ function race(obj)
         horizonsPositions(:,:,i) = obj.log(i).mpcHorizon.states(1:2,:);
     end
 
+    circlesCenters = zeros(2,obj.config.N+1,length(obj.log));
+
+    for i = 1:length(obj.log)
+        circlesCenters(:,:,i) = obj.log(i).circlesCenters(:,:);
+    end
+
     plot(states(1,:),states(2,:),"green");
 
     for i = 1:length(obj.log)
-        carBox = plotCarBox(states(:,i),1.0,2.0);
+        carBox = plotCarBox(states(:,i),obj.parameters.mpcModel.carW,obj.parameters.mpcModel.carL);
         horizonPositions = plotHorizonPositions(horizonsPositions(:,:,i));
+        circles = plotCircleConstraint(circlesCenters(:,:,i),obj.parameters.mpcModel.rOut);
         pause(0.05)
         %exportgraphics(gca,"parabola.gif","Append",true);
         delete(carBox);
         delete(horizonPositions);
+        delete(circles);
     end
 end
 
@@ -44,5 +52,20 @@ end
 
 function horizonPositions = plotHorizonPositions(horizonsPositions)
     horizonPositions = plot(horizonsPositions(1,:),horizonsPositions(2,:),'red');
+end
+
+function circles = plotCircleConstraint(circleCenters,r)
+    circles = zeros(1,length(circleCenters));
+    theta = linspace(0,2*pi);
+
+    for i = 1:length(circleCenters)
+        xc = circleCenters(1,i);
+        yc = circleCenters(2,i);
+
+        x = r*cos(theta)+xc;
+        y = r*sin(theta)+yc;
+
+        circles(1,i) = plot(x,y,'magenta');
+    end
 end
 

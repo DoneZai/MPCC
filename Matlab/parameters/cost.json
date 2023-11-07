@@ -1,7 +1,7 @@
 {
     "qC": 0.1,
     "qL": 1000.0,
-    "qVs": 0.02,
+    "qVs": 0.2,
     
     "qMu": 0.1,
     
@@ -25,7 +25,7 @@
     
     "scQuadTrack": 100.0,
     "scQuadTire": 100.0,
-    "scQuadAlpha": 100.0,
+    "scQuadAlpha": 1000.0,
     
     "scLinTrack": 10.0,
     "scLinTire": 10.0,

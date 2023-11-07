@@ -13,7 +13,7 @@
 
     "upperStateBounds":{
       "yawU": 6.28,
-      "vxU": 20.0,
+      "vxU": 15.0,
       "vyU": 10.0,
       "rU": 2.5,
       "sU": 2500.0,
@@ -27,13 +27,13 @@
       "dThrottleL": -1.0,
       "dSteeringAngleL": -1.0,
       "dBrakesL": -1.0,
-      "dVsL": -10.0
+      "dVsL": -5.0
     },
 
     "upperInputBounds":{
       "dThrottleU": 1.0,
       "dSteeringAngleU": 1.0,
       "dBrakesU": 1.0,
-      "dVsU": 10.0
+      "dVsU": 5.0
     }
 }

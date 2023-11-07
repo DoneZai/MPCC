@@ -22,3 +22,6 @@ plotObj.race();
 %% Plot ax, ay
 plotObj = Plot(config,parameters,track,log);
 plotObj.accelerationsDistribution();
+%% Plot costs, upper bounds slacks and lower bounds slacks
+plotObj = Plot(config,parameters,track,log);
+plotObj.costsAndSlacks();

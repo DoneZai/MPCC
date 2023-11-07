@@ -28,6 +28,8 @@ classdef Plot < handle
 
         accelerationsDistribution(obj) % plot accelerations distribution
 
+        costsAndSlacks(obj) % plot costs on horizons and slacks values
+
         function stateVec = getStateVec(obj)
             stateVec = zeros(length(obj.log(1).x0),length(obj.log));
             for i = 1:length(obj.log)

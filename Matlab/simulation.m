@@ -60,18 +60,21 @@ trackLength = mpc.getTrack().getLength();
 
 % initial point
 
-point0 = 10;
+point0 = 1;
 
 phi0 = atan2(trackPath.y(point0+1) - trackPath.y(point0),trackPath.x(point0+1) - trackPath.x(point0));
-x0 = [trackPath.x(point0);trackPath.y(point0);phi0;1;0;0;0;0;0;0;1];
+x0 = [trackPath.x(point0);trackPath.y(point0);phi0;5;0;0;0;0;0;0;5];
 
 mpc.initMPC(x0);
 
 for i = 1:parameters.config.nSim
-%for i = 1:2
+%for i = 1:10
     mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
     log(i) = mpcSol;
     disp("Iteraton:");
     disp(i);
+    if mpcSol.solverStatus ~= 0
+        error('solver returned status %d in closed loop iteration %d. Exiting.', mpcSol.solverStatus);
+    end
 end

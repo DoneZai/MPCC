@@ -9,7 +9,7 @@ function boundedStates(obj)
         states(:,:,i) = obj.log(i).mpcHorizon.states;
     end
 
-    tiledlayout(obj.config.NX-2,1); % x, y,yaw, vx, vy, r, throttle, steeringAngle, brakes, vs
+    tiledlayout(obj.config.NX-2,1); % yaw, vx, vy, r, throttle, steeringAngle, brakes, vs
 
     % yaw coordinate of all horizons
 

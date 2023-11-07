@@ -1,6 +1,6 @@
 {
-    "carL": 2.0,
-    "carW": 1.0,
+    "carL": 3.0,
+    "carW": 1.36,
     
     "rIn": 1.0,
     "rOut": 1.0,
@@ -9,6 +9,6 @@
     
     "maxAlpha": 0.07,
     
-    "initialVelocity": 15.0,
+    "initialVelocity": 1.0,
     "sTrustRegion": 30.0
 }
