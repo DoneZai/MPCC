@@ -27,7 +27,7 @@ function race(obj)
     end
 
     for i = 1:length(obj.log)
-        carBox = plotCarBox(states(:,i),obj.parameters.mpcModel.carW,obj.parameters.mpcModel.carL);
+        carBox = plotCarBox(states(:,i),obj.parameters.car.carW,obj.parameters.car.carL);
         horizonPositions = plotHorizonPositions(horizonsPositions(:,:,i));
         circles = plotCircleConstraint(circlesCenters(:,:,i),obj.parameters.mpcModel.rOut);
         pause(0.05)
