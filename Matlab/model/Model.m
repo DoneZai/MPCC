@@ -45,16 +45,25 @@ classdef Model
             Frz = lf*m*gAcc/(2.0*(lf+lr));
             
             % rolling resistance of the two front wheels
-            Ffrr = 2*obj.tire.QSY1*Ffz;
+            Ffrr = 2*obj.tire.QSY1*Ffz*tanh(vx);
 
             % rolling resistance of the two rear wheels
-            Frrr = 2*obj.tire.QSY1*Frz;
+            Frrr = 2*obj.tire.QSY1*Frz*tanh(vx);
+
+            % brakes front force
+            Fbf = (-cbf*brakes)/rDyn*tanh(vx);
+
+            % brakes rear force
+            Fbr = (-cbr*brakes)/rDyn*tanh(vx);
+
+            % drivetrain force
+            Fdrv = (cdrv*throttle)/rDyn;
 
             % longitudinal front force
-            Ffx = (-cbf*brakes)/rDyn + Ffrr;
+            Ffx = Fbf+Ffrr;
             
             % longitudinal rear force
-            Frx = (-cbr*brakes+cdrv*throttle)/rDyn + Frrr;
+            Frx = Fbr+Fdrv+Frrr;
 
             % drag force
             Fdrag = obj.car.cd*vx^2.0;
@@ -101,18 +110,33 @@ classdef Model
             cbr = obj.car.cbr;
             rDyn = obj.car.rDyn;
             cdrv = obj.car.cm1 * obj.car.gearRatio;
-            
+
             % normal load on the one front wheel
             Ffz = lr*m*gAcc/(2.0*(lf+lr));
 
             % normal load on the one rear wheel
-            Frz = lf*m*gAcc /(2.0*(lf+lr));
+            Frz = lf*m*gAcc/(2.0*(lf+lr));
             
             % rolling resistance of the two front wheels
-            Ffrr = 2*obj.tire.QSY1*Ffz;
+            Ffrr = 2*obj.tire.QSY1*Ffz*tanh(vx);
 
             % rolling resistance of the two rear wheels
-            Frrr = 2*obj.tire.QSY1*Frz;
+            Frrr = 2*obj.tire.QSY1*Frz*tanh(vx);
+            
+            % brakes front force
+            Fbf = (-cbf*brakes)/rDyn*tanh(vx);
+
+            % brakes rear force
+            Fbr = (-cbr*brakes)/rDyn*tanh(vx);
+
+            % drivetrain force
+            Fdrv = (cdrv*throttle)/rDyn;
+
+            % longitudinal front force
+            Ffx = Fbf+Ffrr;
+            
+            % longitudinal rear force
+            Frx = Fbr+Fdrv+Frrr;
 
             % slip angle of the front wheel
             saf = atan2((vy+r*lf),vx)-steeringAngle;
@@ -125,13 +149,6 @@ classdef Model
 
             % latteral rear force
             Fry = -sar*20000;
-
-            % longitudinal front force
-            Ffx = (-cbf*brakes)/rDyn+Ffrr;
-            
-            % longitudinal rear force
-            Frx = (-cbr*brakes+cdrv*throttle)/rDyn+Frrr;
-
 
             % drag force
             Fdrag = obj.car.cd*vx^2.0;
@@ -191,22 +208,31 @@ classdef Model
                     Drfz = (Frz-fzNominal)/fzNominal;
                     
                     % rolling resistance of the two front wheels
-                    Ffrr = 2*obj.tire.QSY1*Ffz;
+                    Ffrr = 2*obj.tire.QSY1*Ffz*tanh(vx);
         
                     % rolling resistance of the two rear wheels
-                    Frrr = 2*obj.tire.QSY1*Frz;
+                    Frrr = 2*obj.tire.QSY1*Frz*tanh(vx);
+                    
+                    % brakes front force
+                    Fbf = (-cbf*brakes)/rDyn*tanh(vx);
+        
+                    % brakes rear force
+                    Fbr = (-cbr*brakes)/rDyn*tanh(vx);
+        
+                    % drivetrain force
+                    Fdrv = (cdrv*throttle)/rDyn;
+        
+                    % longitudinal front force
+                    Ffx = Fbf+Ffrr;
+                    
+                    % longitudinal rear force
+                    Frx = Fbr+Fdrv+Frrr;
         
                     % slip angle of the front wheel
                     saf = atan2((vy+r*lf),vx)-steeringAngle;
         
                     % slip angle of the rear wheel
                     sar = atan2((vy-r*lr),vx);
-        
-                    % longitudinal front force
-                    Ffx = (-cbf*brakes)/rDyn+Ffrr;
-                    
-                    % longitudinal rear force
-                    Frx = (-cbr*brakes+cdrv*throttle)/rDyn+Frrr;
         
                     % latteral tire force Pacejka coefficients
                     % front wheel coefficients

@@ -24,7 +24,7 @@ addpath('spline');
 addpath('tracks');
 addpath('types');
 
-addpath('/opt/casadi/')
+%addpath('/opt/casadi/')
 %% add subdirectories for the chosen solver
 
 config = config();
@@ -36,6 +36,9 @@ if strcmp(config.solver,'ipopt')
 elseif strcmp(config.solver,'hpipm')
     addpath(genpath('HPIPM'));
     mpc = Mpcc(config,parameters);
+elseif strcmp(config.solver,'acados')
+    addpath('Acados/');
+    mpc = Acados(config,parameters);
 else
     disp('Wrong solver, choose another one in config.m');
     return
@@ -55,14 +58,23 @@ trackCenter = mpc.getTrack().getPath();
 trackPath = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
-phi0 = atan2(trackPath.y(2) - trackPath.y(1),trackPath.x(2) - trackPath.x(1));
-x0 = [trackPath.x(1);trackPath.y(1);phi0;15;0;0;0;0;0;0;0];
+% initial point
 
-log(parameters.config.nSim) = MpcReturn();
+point0 = 1;
+
+phi0 = atan2(trackPath.y(point0+1) - trackPath.y(point0),trackPath.x(point0+1) - trackPath.x(point0));
+x0 = [trackPath.x(point0);trackPath.y(point0);phi0;0;0;0;0;0;0;0;0];
+
+mpc.initMPC(x0);
+
 for i = 1:parameters.config.nSim
+%for i = 1:10
     mpcSol = mpc.runMPC(x0);
     x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
     log(i) = mpcSol;
     disp("Iteraton:");
     disp(i);
+    if mpcSol.solverStatus ~= 0
+        error('solver returned status %d in closed loop iteration %d. Exiting.', mpcSol.solverStatus);
+    end
 end
