@@ -98,8 +98,6 @@ classdef Ipopt < handle
 
             obj.track.innerBorderInterpolation.x = interpolant('innerBorder_interpolation_x','bspline',{innerBorder.s},innerBorder.x);
             obj.track.innerBorderInterpolation.y = interpolant('innerBorder_interpolation_y','bspline',{innerBorder.s},innerBorder.y);
-
-            obj.initMPC();
         end
 
         function track = getTrack(obj)
@@ -332,8 +330,8 @@ classdef Ipopt < handle
             obj.opts.ipopt.max_iter = 200;
             obj.opts.ipopt.print_level = 3;%0,3
             obj.opts.print_time = 0;
-            obj.opts.compiler = 'shell';
-            obj.opts.jit = true;
+            %obj.opts.compiler = 'shell';
+            %obj.opts.jit = true;
             obj.opts.ipopt.acceptable_tol =1e-8;
             obj.opts.ipopt.acceptable_obj_change_tol = 1e-6;
             obj.opts.ipopt.linear_solver = 'ma27';
@@ -493,7 +491,8 @@ classdef Ipopt < handle
 
             ipoptReturn.x0 = obj.initialStateGuess(:,1);
             ipoptReturn.u0 = obj.initialControlGuess(:,1);
-            ipoptReturn.mpcHorizon = obj.initialStateGuess;
+            ipoptReturn.mpcHorizon.states = obj.initialStateGuess;
+            ipoptReturn.mpcHorizon.inputs = obj.initialControlGuess;
         end
 
         function x0 = unwrapState(obj,x0)

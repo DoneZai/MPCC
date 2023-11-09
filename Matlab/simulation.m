@@ -31,13 +31,10 @@ config = config();
 parameters = Parameters(config);
 
 if strcmp(config.solver,'ipopt')
-    addpath('Ipopt');
+    addpath('ipopt');
     mpc = Ipopt(config,parameters);
-elseif strcmp(config.solver,'hpipm')
-    addpath(genpath('HPIPM'));
-    mpc = Mpcc(config,parameters);
 elseif strcmp(config.solver,'acados')
-    addpath('Acados/');
+    addpath('acados/');
     mpc = Acados(config,parameters);
 else
     disp('Wrong solver, choose another one in config.m');
@@ -59,13 +56,12 @@ trackPath = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
 % initial point
-
 point0 = 1;
 
 phi0 = atan2(trackPath.y(point0+1) - trackPath.y(point0),trackPath.x(point0+1) - trackPath.x(point0));
 x0 = [trackPath.x(point0);trackPath.y(point0);phi0;0;0;0;0;0;0;0;0];
 
-mpc.initMPC(x0);
+mpc.initMPC();
 
 for i = 1:parameters.config.nSim
 %for i = 1:10
