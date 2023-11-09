@@ -351,6 +351,11 @@ classdef Acados < handle
             obj.initialStateGuess(:,2:obj.config.N) = obj.initialStateGuess(:,3:obj.config.N+1);
             obj.initialStateGuess(:,obj.config.N+1) = full(obj.ode4(obj.initialStateGuess(:,obj.config.N),obj.initialControlGuess(:,obj.config.N)));
 
+            for i = 1:obj.config.N+1
+                obj.initialStateGuess(4,i) = max(obj.initialStateGuess(4,i),obj.parameters.mpcModel.vxMin);
+                obj.initialStateGuess(11,i) = max(obj.initialStateGuess(11,i),obj.parameters.mpcModel.vxMin);
+            end
+
             obj.unwrapInitialGuess();
         end
 
@@ -359,8 +364,8 @@ classdef Acados < handle
             obj.initialControlGuess = zeros(obj.config.NU,obj.config.N);
 
             obj.initialStateGuess(:,1) = x0;
-            obj.initialStateGuess(obj.config.siIndex.vx,1:obj.config.N+1) = max(x0(4),obj.parameters.mpcModel.initialVelocity);
-            obj.initialStateGuess(obj.config.siIndex.vs,1:obj.config.N+1) = max(x0(4),obj.parameters.mpcModel.initialVelocity);
+            obj.initialStateGuess(obj.config.siIndex.vx,1:obj.config.N+1) = max(x0(4),obj.parameters.mpcModel.vxMin);
+            obj.initialStateGuess(obj.config.siIndex.vs,1:obj.config.N+1) = max(x0(4),obj.parameters.mpcModel.vxMin);
 
             for i = 2:obj.config.N+1
               obj.initialStateGuess(obj.config.siIndex.s,i) =...

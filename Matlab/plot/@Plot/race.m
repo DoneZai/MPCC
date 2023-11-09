@@ -31,14 +31,14 @@ function race(obj)
         horizonPositions = plotHorizonPositions(horizonsPositions(:,:,i));
         %circles = plotCircleConstraint(circlesCenters(:,:,i),obj.parameters.mpcModel.rOut);
         pause(0.05)
-        %exportgraphics(gca,"race_thin_wo_constraint.gif","Append",true);
+        %exportgraphics(gca,"race_FSG_track.gif","Append",true);
         delete(carBox);
         delete(horizonPositions);
         %delete(circles);
     end
 
     plot(states(1,:),states(2,:),"green");
-    exportgraphics(gca,"race_thin_wo_constraint.gif","Append",true);
+    %exportgraphics(gca,"race_FSG_track.gif","Append",true);
     pause(5.00)
 end
 
