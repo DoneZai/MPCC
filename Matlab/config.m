@@ -1,15 +1,14 @@
 function config = config()
-    config.solver = 'acados'; % ipopt, hpipm, acados
+    config.solver = 'acados'; % ipopt, acados
     config.simulator = 'dynamic'; % kinematic, simple_dynamic, dynamic
     config.NX = 11;
     config.NU  = 4;
     
     config.NB = 11;  % max number of bounds
-    config.NPC = 2;  % number of polytopic constraints (2 for hpipm and 3 for ipopt and acados)
-    config.NS = 3; % number of softened constraints (2 for hpipm and 3 for ipopt and acados)
+    config.NS = 3; % number of soft constraints
 
-    config.N = 100;
-    config.NSpline = 5000;
+    config.N = 100; % horizon length
+    config.NSpline = 5000; % number of track approximation points
 
     config.siIndex = struct('x',1, ...
                      'y',2, ...

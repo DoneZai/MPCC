@@ -87,13 +87,13 @@ classdef Acados < handle
             track = obj.track.centerLine;
         end
 
-        function initMPC(obj,x0)
-            obj.initOcpModel(x0);
+        function initMPC(obj)
+            obj.initOcpModel();
             obj.setBounds();
             obj.setOCPOpts();
         end
 
-        function initOcpModel(obj,x0)
+        function initOcpModel(obj)
             import casadi.*;
 
             obj.ocpModel.set('name','acados_mpcc');
@@ -119,7 +119,7 @@ classdef Acados < handle
             obj.ocpModel.set('cost_ext_fun_type','casadi');
             obj.ocpModel.set('cost_ext_fun_type_e','casadi');
             
-            obj.ocpModel.set('constr_x0', x0);
+            obj.ocpModel.set('constr_x0', [0,0,0,0,0,0,0,0,0,0,0]);
             obj.ocpModel.set('cost_expr_ext_cost',model.cost_expr_ext_cost);
             obj.ocpModel.set('cost_expr_ext_cost_e',model.cost_expr_ext_cost_e);
 
