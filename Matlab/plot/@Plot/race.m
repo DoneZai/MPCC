@@ -29,15 +29,17 @@ function race(obj)
     for i = 1:length(obj.log)
         carBox = plotCarBox(states(:,i),obj.parameters.car.carW,obj.parameters.car.carL);
         horizonPositions = plotHorizonPositions(horizonsPositions(:,:,i));
-        circles = plotCircleConstraint(circlesCenters(:,:,i),obj.parameters.mpcModel.rOut);
+        %circles = plotCircleConstraint(circlesCenters(:,:,i),obj.parameters.mpcModel.rOut);
         pause(0.05)
-        %exportgraphics(gca,"parabola.gif","Append",true);
+        exportgraphics(gca,"race_thin_wo_constraint.gif","Append",true);
         delete(carBox);
         delete(horizonPositions);
-        delete(circles);
+        %delete(circles);
     end
 
     plot(states(1,:),states(2,:),"green");
+    exportgraphics(gca,"race_thin_wo_constraint.gif","Append",true);
+    pause(5.00)
 end
 
 

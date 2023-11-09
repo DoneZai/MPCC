@@ -25,3 +25,9 @@ plotObj.accelerationsDistribution();
 %% Plot costs, upper bounds slacks and lower bounds slacks
 plotObj = Plot(config,parameters,track,log);
 plotObj.costsAndSlacks();
+%% Plot steeringAngle, sideSlipAngle, kinematicSideSlipAngle, frontSlipAngle, rearSlipAngle on a race
+plotObj = Plot(config,parameters,track,log);
+plotObj.raceAngles();
+%% Plot vx, vy, r
+plotObj = Plot(config,parameters,track,log);
+plotObj.velocities();

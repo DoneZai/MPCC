@@ -30,6 +30,10 @@ classdef Plot < handle
 
         costsAndSlacks(obj) % plot costs on horizons and slacks values
 
+        raceAngles(obj) % plot angles on the race
+
+        velocities(obj) % plot velocities on the race
+
         function stateVec = getStateVec(obj)
             stateVec = zeros(length(obj.log(1).x0),length(obj.log));
             for i = 1:length(obj.log)
