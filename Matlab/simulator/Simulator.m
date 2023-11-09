@@ -41,7 +41,7 @@ classdef Simulator < handle
             elseif strcmp(config.simulator,'dynamic')
                 rhs = obj.model.initDynamicModel(state,input);
             elseif strcmp(config.simulator,'simple_dynamic')
-                rhs = obj.model.initSimplifiedDynamicModel(state,input);
+                rhs = obj.model.initSimpleDynamicModel(state,input);
             end
 
             obj.f = Function('f',{state,input},{rhs});
