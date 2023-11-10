@@ -24,4 +24,8 @@ git submodule update --recursive --init
 mkdir build
 cd build && cmake -DACADOS_WITH_QPOASES=ON ..
 make -j$(nproc) && make install
+cd ../external
+wget -q -nc --show-progress https://github.com/casadi/casadi/releases/download/3.5.0/casadi-linux-matlabR2014b-v3.5.0.tar.gz
+mkdir -p casadi-matlab
+tar -xf casadi-linux-matlabR2014b-v3.5.0.tar.gz -C casadi-matlab
 cd ../../
