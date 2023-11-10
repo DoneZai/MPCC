@@ -5,8 +5,8 @@ function carPositions(obj)
 
     hold on;
 
-    plot(obj.track.xOuter,obj.track.yOuter,'b');
-    plot(obj.track.xInner,obj.track.yInner,'y');
+    plot(obj.track.xOuter,obj.track.yOuter,'black');
+    plot(obj.track.xInner,obj.track.yInner,'black');
     plot(obj.track.x,obj.track.y,'r');
 
     states = zeros(obj.config.NX,obj.config.N+1,length(obj.log));
