@@ -5,13 +5,13 @@ Here is a fork of original [**MPCC**](https://github.com/alexliniger/MPCC) from 
 
 In this fork **MPCC** has **Matlab** and **C++** implementations. **Matlab** implementation is developed for creating one of the control approaches for the Formula Student Driverless car of **Bauman Racing Team**.
 
-**Matlab** version of this rep implements **C++** (not Matlab) version (**fullsize** branch) of Alex Liniger MPCC with some changes:
+In the current **Matlab** version new cost function, constraints functions were suggested. Moreover **Matlab** version does not use [**hpipm**](https://github.com/giaf/hpipm) solver anymore, [**acados**](https://github.com/acados/acados) and [**ipopt**](https://coin-or.github.io/Ipopt/) solvers with [**CasADi**](https://web.casadi.org/) interface for automatic equations differentiation are used instead.
 
-1. plant (car) model has additional control input (Brakes rate) and another formulation of Pacejka tire model for the lateral slip. 
-2. only track borders polytopic constraint and front slip angle constraint are taken into account, tire ellipse constraint will be added later.
-3. Cost calculation was adjusted for the new constraints number and new model with new control input.
+Now a primary version uses **acados**, because it has lots of benefits for solving OCPs in a real tume applications. **ipopt** version is used as a reference and on the current version have some problems, which will be solved soon.
 
-Later will be implemented soft polytopic constraint on brakes / throttle values, because on the normal car there is no need to accelerate and decelerate at the same time.
+![racing lap on the FSG track](https://github.com/Bauman-Racing-Team/MPCC/blob/develop/Matlab/race_FSG_track.gif)
+![racing lap on the FSI track](https://github.com/Bauman-Racing-Team/MPCC/blob/develop/Matlab/race_FSI_track.gif)
+![racing lap on the thin track](https://github.com/Bauman-Racing-Team/MPCC/blob/develop/Matlab/race_thin_track.gif)
 
 ## Installation
 
@@ -24,7 +24,8 @@ git clone https://github.com/Bauman-Racing-Team/MPCC.git
 
 1. Ubuntu (Tested on Ubuntu 22.04);
 2. Matlab (Tested on Matlab R2022a);
-3. [**HPIPM**](https://github.com/giaf/hpipm/tree/master) for solving OCP QP and [**BLASFEO**](https://github.com/giaf/blasfeo) (HPIPM dependency).
+3. [**CasADi**](https://web.casadi.org/) for automatic differentiation and **ipopt** solver, which comes with **CasADi**;
+4. [**acados**](https://github.com/acados/acados) for solving OCP in a real time.
 
 ### Requirements to run C++ version of MPCC
 
@@ -32,23 +33,16 @@ git clone https://github.com/Bauman-Racing-Team/MPCC.git
 2. [**HPIPM**](https://github.com/giaf/hpipm/tree/master) for solving OCP QP and [**BLASFEO**](https://github.com/giaf/blasfeo) (HPIPM dependency);
 3. Other dependencies from <C++/README.md>.
 
-### HPIPM and BLASFEO installation with script
+### Requirements installation with a script, which will install all requirenments for both versions Matlab and C++
 
 1. Open the terminal and navigate inside this rep:
 ```bash
 cd MPCC
 ```
-2. run **install.sh** script to install **HPIPM** and **BLASFEO**:
+2. run **install.sh** script to install **acados** and **CasADi** with **ipopt** for the **Matlab** version and **HPIPM** and **BLASFEO** for the **C++** version:
 ```bash
 ./install.sh
 ```
-(Optional steps and required only for those, who want to use **Matlab** version) 
-
-1. Navigate inside hpipm folder and build matlab MEX interface:
-```bash
-cd external/hpipm/interfaces/matlab_octave/
-```
-2. open Matlab and run **env.m** script inside Matlab to set variables for HPIPM, then open **compile_mex_all.m** function inside this folder in Matlab and run it too to compile MEX files for Matlab.
 
 ## Running (Tested on **Ubuntu 22.04** only!)
 

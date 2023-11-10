@@ -4,7 +4,7 @@
 ```bash
 cd MPCC/Matlab
 ```
-2. source **env.sh** for **HPIPM** solver with command:
+2. source **env.sh** for **acados** and **casadi** with **ipopt** solver with command:
 ```bash
 source env.sh
 ```
@@ -13,26 +13,22 @@ source env.sh
 
 ## Tracks
 
-By default a track from [**MPCC**](https://github.com/alexliniger/MPCC) **fullsize** branch is used.
-
-To use other tracks uncomment lines in **simulation.m** file **(33,34,35,37,39,40,42)** and comment out lines **(46,47)**.
+By default a track from **Formula Student Germany** is used.
 
 change track in **trackNameFile** variable.
 
 It could be:
-1. **competitions.mat**;
-2. **constrictor.mat**;
-3. **FSG.mat**;
-4. **FSI.mat**;
-5. **garden.mat**;
-6. **hairpins.mat**:
-7. **mess.mat**;
-8. **peanut.mat**:
-9. **rand.mat**:
-10. **rectangle.mat**:
-11. **small.mat**:
-12. **thin.mat**.
+1. **FSG.mat**; (tested one)
+2. **FSI.mat**; (tested one)
+3. **thin.mat**; (tested one)
+4. **competitions.mat**; (not tested yet)
+5. **constrictor.mat**; (not tested yet)
+6. **garden.mat**; (not tested yet)
+7. **hairpins.mat**: (not tested yet)
+8. **mess.mat**; (not tested yet)
+9. **peanut.mat**: (not tested yet)
+10. **rand.mat**: (not tested yet)
+11. **rectangle.mat**: (not tested yet)
+12. **small.mat**: (not tested yet)
 
-To use splined **FSG** track from [**nirajbasnet**](https://github.com/nirajbasnet/Nonlinear_MPCC_for_autonomous_racing) rep uncomment lines in **somulation.m** file **(51,52,53,55,56,58,59,61,62,64)** and comment out lines **(33,34,35,37,39,40,42)** and **(46,47)**
-
-**Be carefull!!!**, on all other tracks than the default track from the [**MPCC**](https://github.com/alexliniger/MPCC) **fullsize** branch **MPCC** performs bad and unstable for now. 
+**Be carefull!!!**, now tested tracks are **FSG** (Formula Student Germany), **FSI** (Formula Student Italy) ant **thin** (Track from AMZ Driverless team).
