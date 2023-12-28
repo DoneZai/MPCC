@@ -1,0 +1,5 @@
+Acados.m 316 317 行
+                slacks.upper(:,i) = obj.ocp.get('su',1);
+                slacks.lower(:,i) = obj.ocp.get('sl',1);
+249行 改成51
+为什么 Simulator中39-45用的是dynamicmodel 但getModel中使用了simplecombined model
