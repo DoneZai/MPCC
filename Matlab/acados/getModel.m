@@ -43,12 +43,19 @@ function model = getModel(parameters)
     z = [];
 
     % parameters
+    qC = SX.sym('qC');
+    qL = SX.sym('qL');
+    qVs = SX.sym('qVs');
+    rdThrottle = SX.sym('rdThrottle');
+    rdSteeringAngle = SX.sym('rdSteeringAngle');
+    rdBrakes = SX.sym('rdBrakes');
+    rdVs = SX.sym('rdVs');
     xTrack = SX.sym('xTrack');
     yTrack = SX.sym('yTrack');
     phiTrack = SX.sym('phiTrack');
     s0 = SX.sym('s0');
 
-    p = [xTrack;yTrack;phiTrack;s0];
+    p = [xTrack;yTrack;phiTrack;s0;qC;qL;qVs;rdThrottle;rdSteeringAngle;rdBrakes;rdVs];
     
     % dynamics
     carModel = Model(parameters.car,parameters.tire);
@@ -70,20 +77,20 @@ function model = getModel(parameters)
     error = [ec;el];
 
     % Coeffs for laf and contouring errors penallization
-    Q = diag([parameters.costs.qC,parameters.costs.qL]);
+    Q = diag([qC,qL]);
 
-    qVs = parameters.costs.qVs;
+%     qVs = parameters.costs.qVs;
     vRef = parameters.mpcModel.vRef;
 
     % Coeffs for control inputs penalization
-    R = diag([parameters.costs.rThrottle, ...
-              parameters.costs.rSteeringAngle, ...
-              parameters.costs.rBrakes, ...
-              parameters.costs.rVs]);
+    R = diag([rdThrottle, ...
+              rdSteeringAngle, ...
+              rdBrakes, ...
+              rdVs]);
 
     cost_expr_ext_cost = error'*Q*error+input'*R*input+qVs*(vRef-vs)^2;
     cost_expr_ext_cost_e = error'*Q*error+qVs*(vRef-vs)^2;
-
+    
     % constraints 
     lf = parameters.car.lf;
     lr = parameters.car.lr;
@@ -100,6 +107,12 @@ function model = getModel(parameters)
 
     % track constraint
     constr_expr_h = [constr_expr_h;(x-xTrack)^2 + (y-yTrack)^2];
+
+    % friction ellipse constraint
+    [Ffx,Ffy,Frx,Fry] = carModel.initFrictionEllipseConstraint(state);
+    constrF = (Ffx/parameters.car.muxFz)^2+(Ffy/parameters.car.muyFz)^2;
+    constrR = (Frx/parameters.car.muxFz)^2+(Fry/parameters.car.muyFz)^2;
+    constr_expr_h = [constr_expr_h;constrF;constrR];
 
     % model filling
     model.f_expl_expr = f_expl;

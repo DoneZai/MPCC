@@ -48,6 +48,8 @@ track = Track(cones_blue, cones_yellow);
 
 simulator = Simulator(config,parameters.car,parameters.tire);
 
+carModel = Model(parameters.car,parameters.tire);
+
 mpc.setTrack(track);
 
 trackCenter = mpc.getTrack().getPath();
@@ -59,18 +61,28 @@ trackLength = mpc.getTrack().getLength();
 point0 = 1;
 
 phi0 = atan2(trackPath.y(point0+1) - trackPath.y(point0),trackPath.x(point0+1) - trackPath.x(point0));
-x0 = [trackPath.x(point0);trackPath.y(point0);phi0;0;0;0;0;0;0;0;0];
+x0 = [trackPath.x(point0);trackPath.y(point0);phi0;0;0;0;0;0;0;0;0;0;0];
 
 mpc.initMPC();
+log = MpcReturn.empty(1, 0);
+maxAttempt = 0;
 
 for i = 1:parameters.config.nSim
 %for i = 1:10
-    mpcSol = mpc.runMPC(x0);
-    x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
-    log(i) = mpcSol;
-    disp("Iteraton:");
-    disp(i);
-    if mpcSol.solverStatus ~= 0
-        error('solver returned status %d in closed loop iteration %d. Exiting.', mpcSol.solverStatus);
-    end
+        mpcSol = mpc.runMPC(x0(1:11));
+        x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
+        if ~isempty(mpcSol.x0)
+            log(end+1) = mpcSol;
+            maxAttempt = 0;
+        else
+            maxAttempt = maxAttempt+1;
+            if maxAttempt>10
+                error('The maximum number of attempts has been reached ')
+            end
+        end
+        disp("Iteration:");
+        disp(i);
+%         if mpcSol.solverStatus ~= 0
+%             error('solver returned status %d in closed loop iteration %d. Exiting.', mpcSol.solverStatus);
+%         end
 end

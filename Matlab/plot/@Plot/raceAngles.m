@@ -111,6 +111,41 @@ function raceAngles(obj)
     ylabel(rearSlipAngle,'rearSlipAngle');
 
 
+    % Ellipse
+    Frx = zeros(length(obj.log),1);
+    Fry = zeros(length(obj.log),1);
+    Ffx = zeros(length(obj.log),1);
+    Ffy = zeros(length(obj.log),1);
+    for i = 1:length(obj.log)
+        state = states(:,i);
+        [Ffx(i),Ffy(i),Frx(i),Fry(i)] = obj.carModel.initSimpleFrictionEllipseConstraint(state);
+    end
+
+    figure;
+    subplot(1,2,1);
+    hold on;
+    axis equal;
+    equation = @(x, y) (x/obj.parameters.car.muxFz).^2 + (y/obj.parameters.car.muyFz).^2 - 1;
+    ezplot(equation, [-obj.parameters.car.muxFz, obj.parameters.car.muxFz, -obj.parameters.car.muyFz, obj.parameters.car.muyFz]);
+    h = get(gca, 'Children');
+    set(h, 'Color', 'r','LineStyle','--');
+    plot(Ffx,Ffy,'.')
+    title('Tire force of front force');
+    xlabel('Ffx');
+    ylabel('Ffy');
+
+    subplot(1,2,2);
+    hold on;
+    axis equal;
+    equation = @(x, y) (x/obj.parameters.car.muxFz).^2 + (y/obj.parameters.car.muyFz).^2 - 1;
+    ezplot(equation, [-obj.parameters.car.muxFz, obj.parameters.car.muxFz, -obj.parameters.car.muyFz, obj.parameters.car.muyFz]);
+    h = get(gca, 'Children');
+    set(h, 'Color', 'r','LineStyle','--');
+    plot(Frx,Fry,'.')
+
+    title('Tire force of rear force');
+    xlabel('Frx');
+    ylabel('Fry');
 
 end
 
