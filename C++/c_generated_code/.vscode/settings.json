@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "acados_solver_acados_mpcc.h": "c",
+        "stdio.h": "c",
+        "print.h": "c",
+        "math.h": "c",
+        "ocp_nlp_common.h": "c",
+        "ocp_nlp_interface.h": "c",
+        "external_function_interface.h": "c",
+        "blasfeo_d_aux_ext_dep.h": "c"
+    },
+    "python.autoComplete.extraPaths": [
+        "/opt/ros/foxy/lib/python3.8/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/opt/ros/foxy/lib/python3.8/site-packages"
+    ]
+}

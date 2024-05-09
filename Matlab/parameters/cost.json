@@ -22,12 +22,12 @@
     
     "qCNmult": 1000.0,
     "qRNmult": 10.0,
-    
+
     "scQuadTrack": 1E3,
-    "scQuadTire": 1E3,
-    "scQuadAlpha": 1E3,
+    "scQuadTire": 1E2,
+    "scQuadAlpha": 1E4,
     
-    "scLinTrack": 10.0,
-    "scLinTire": 10.0,
-    "scLinAlpha": 10.0
+    "scLinTrack": 1E2,
+    "scLinTire": 1E2,
+    "scLinAlpha": 1E2
 }

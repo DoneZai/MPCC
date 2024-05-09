@@ -41,12 +41,10 @@ else
     return
 end
 
-trackNameFile = 'FSG.mat'; %track name
+trackNameFile = 'thin.mat'; %track name
 load(trackNameFile);
 
 track = Track(cones_blue, cones_yellow);
-
-simulator = Simulator(config,parameters.car,parameters.tire);
 
 carModel = Model(parameters.car,parameters.tire);
 
@@ -57,6 +55,8 @@ trackCenter = mpc.getTrack().getPath();
 trackPath = mpc.getTrack().getPath();
 trackLength = mpc.getTrack().getLength();
 
+simulator = Simulator(config,parameters.car,parameters.tire,mpc.getTrack());
+
 % initial point
 point0 = 1;
 
@@ -65,24 +65,15 @@ x0 = [trackPath.x(point0);trackPath.y(point0);phi0;0;0;0;0;0;0;0;0;0;0];
 
 mpc.initMPC();
 log = MpcReturn.empty(1, 0);
-maxAttempt = 0;
+x00 = zeros(13,0);
 
 for i = 1:parameters.config.nSim
-%for i = 1:10
         mpcSol = mpc.runMPC(x0(1:11));
         x0 = simulator.simTimeStep(x0,mpcSol.u0,parameters.config.ts);
         if ~isempty(mpcSol.x0)
             log(end+1) = mpcSol;
-            maxAttempt = 0;
-        else
-            maxAttempt = maxAttempt+1;
-            if maxAttempt>10
-                error('The maximum number of attempts has been reached ')
-            end
         end
+        x00(:,end+1) = x0;
         disp("Iteration:");
         disp(i);
-%         if mpcSol.solverStatus ~= 0
-%             error('solver returned status %d in closed loop iteration %d. Exiting.', mpcSol.solverStatus);
-%         end
 end

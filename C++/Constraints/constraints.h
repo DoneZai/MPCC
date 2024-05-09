@@ -20,7 +20,7 @@
 #include "config.h"
 #include "Spline/arc_length_spline.h"
 #include "Model/model.h"
-#include <cppad/cg.hpp>
+// #include <cppad/cg.hpp>
 namespace mpcc{
 struct ConstrainsMatrix {
     // dl <= C xk + D uk <= du

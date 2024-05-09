@@ -1,0 +1,14 @@
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/install/strip.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/model_acados_mpcc.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/ocp_acados_mpcc.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/acados_sim_solver_acados_mpcc.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/sim_acados_mpcc.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/acados_ocp_solver_acados_mpcc.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/edit_cache.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/rebuild_cache.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/acados_solver_acados_mpcc.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/install.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/main_acados_mpcc.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/list_install_components.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/main_sim_acados_mpcc.dir
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/CMakeFiles/install/local.dir

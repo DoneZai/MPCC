@@ -16,8 +16,8 @@
   "rDelta" : 1E-9,
   "rVs" : 1E-5,
 
-  "rdD" : 1E-1,
-  "rdB" : 1E0,
+  "rdD" : 1E2,
+  "rdB" : 1E2,
   "rdDelta" : 5E2,
   "rdVs" : 1E-4,
 

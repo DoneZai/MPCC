@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/acados_mpcc_model/acados_mpcc_expl_ode_fun.c
+math.h
+-
+
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/acados_mpcc_model/acados_mpcc_expl_vde_adj.c
+math.h
+-
+
+/home/jinlong/baumanracing/MPCC/Matlab/c_generated_code/acados_mpcc_model/acados_mpcc_expl_vde_forw.c
+math.h
+-
+
